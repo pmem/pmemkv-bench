@@ -1,0 +1,7 @@
+*.class
+*.d
+.DS_Store
+.idea/
+bin/
+cmake-build-debug/
+googletest-*.zip
