@@ -2,12 +2,12 @@ const KVEngine = require('../../pmemkv-nodejs/lib/kv_engine');
 
 function test_engine(engine, count) {
     console.log(`\nTesting ${engine} engine...`);
-    const kv = new KVEngine(engine, '/dev/shm/pmemkv', 1024 * 1024 * 1024);
+    const kv = new KVEngine(engine, '/dev/shm/pmemkv', 1024 * 1024 * 1104);
 
     console.log(`Putting ${count} sequential values`);
     console.time("  in");
     for (let i = 1; i <= count; i++) {
-        kv.put(i.toString(), 'AAAAAAAAAAAAAAAA');  // 16-char value
+        kv.put(i.toString(), `${i.toString()}!`);
     }
     console.timeEnd("  in");
 
@@ -22,7 +22,7 @@ function test_engine(engine, count) {
     console.log(`  failures: ${failures}`);
 }
 
-const count = 1000000;
+const count = 6012298;
 test_engine('kvtree', count);
 test_engine('blackhole', count);
 console.log('\nFinished!\n\n');
