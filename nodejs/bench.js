@@ -23,6 +23,6 @@ function test_engine(engine, count) {
 }
 
 const count = 1000000;
-test_engine('kvtree', count);
+test_engine('kvtree2', count);
 test_engine('blackhole', count);
 console.log('\nFinished!\n\n');

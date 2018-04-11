@@ -20,7 +20,7 @@ def test_engine(engine, count)
   puts "   in #{Time.now - t1} sec, failures=#{failures}"
 end
 
-count = 6012298
+count = 8012298
 test_engine('kvtree', count)
 test_engine('blackhole', count)
 puts "\nFinished!\n\n"

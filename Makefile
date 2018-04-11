@@ -1,7 +1,5 @@
 .ONESHELL:
 
-all: java_bench ruby_bench nodejs_bench
-
 reset:
 	rm -rf /dev/shm/pmemkv /tmp/pmemkv
 

@@ -21,6 +21,6 @@ def test_engine(engine, count)
 end
 
 count = 1000000
-test_engine('kvtree', count)
+test_engine('kvtree2', count)
 test_engine('blackhole', count)
 puts "\nFinished!\n\n"

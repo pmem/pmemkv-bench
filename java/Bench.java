@@ -4,7 +4,7 @@ public class Bench {
 
     public static void test_engine(String engine, int count) {
         System.out.printf("%nTesting %s engine...%n", engine);
-        KVEngine kv = new KVEngine(engine, "/dev/shm/pmemkv", 1024 * 1024 * 1024);
+        KVEngine kv = new KVEngine(engine, "/dev/shm/pmemkv", 1024 * 1024 * 1024L);
 
         System.out.printf("Putting %d sequential values%n", count);
         long start = System.currentTimeMillis();
@@ -27,7 +27,7 @@ public class Bench {
 
     public static void main(String[] args) {
         int count = 1000000;
-        test_engine("kvtree", count);
+        test_engine("kvtree2", count);
         test_engine("blackhole", count);
         System.out.printf("%nFinished!%n%n");
     }
