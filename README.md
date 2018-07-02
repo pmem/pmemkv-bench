@@ -1,2 +1,2 @@
 # pmemkv-tools
-Unofficial tools and utilities for pmemkv
+Optional tools and utilities for pmemkv
