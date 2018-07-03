@@ -4,14 +4,14 @@ function test_engine(engine, count) {
     console.log(`\nTesting ${engine} engine...`);
     const kv = new KVEngine(engine, '/dev/shm/pmemkv', 1024 * 1024 * 1024);
 
-    console.log(`Putting ${count} sequential values`);
+    console.log(`Put for ${count} sequential values`);
     console.time("  in");
     for (let i = 1; i <= count; i++) {
         kv.put(i.toString(), 'AAAAAAAAAAAAAAAA');  // 16-char value
     }
     console.timeEnd("  in");
 
-    console.log(`Getting ${count} sequential values`);
+    console.log(`Get for ${count} sequential values`);
     console.time("  in");
     let failures = 0;
     for (let i = 1; i <= count; i++) {
@@ -20,9 +20,29 @@ function test_engine(engine, count) {
     }
     console.timeEnd("  in");
     console.log(`  failures: ${failures}`);
+
+    console.log(`Each for ${count} sequential values`);
+    console.time("  in");
+    failures = count;
+    kv.each(
+        function (k, v) {
+            failures--;
+        }
+    );
+    console.timeEnd("  in");
+    console.log(`  failures: ${failures}`);
+
+    console.log(`Exists for ${count} sequential values`);
+    console.time("  in");
+    failures = 0;
+    for (let i = 1; i <= count; i++) {
+        if (!kv.exists(i.toString())) failures++;
+    }
+    console.timeEnd("  in");
+    console.log(`  failures: ${failures}`);
 }
 
 const count = 1000000;
-test_engine('kvtree2', count);
 test_engine('blackhole', count);
+test_engine('btree', count);
 console.log('\nFinished!\n\n');
