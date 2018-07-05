@@ -1,8 +1,12 @@
 const KVEngine = require('../../pmemkv-nodejs/lib/kv_engine');
 
+const fs = require('fs');
+const FILE = '/dev/shm/pmemkv';
+
 function test_engine(engine, count) {
     console.log(`\nTesting ${engine} engine...`);
-    const kv = new KVEngine(engine, '/dev/shm/pmemkv', 1024 * 1024 * 1024);
+    if (fs.existsSync(FILE)) fs.unlinkSync(FILE);
+    const kv = new KVEngine(engine, FILE, 1024 * 1024 * 1024);
 
     console.log(`Put for ${count} sequential values`);
     console.time("  in");

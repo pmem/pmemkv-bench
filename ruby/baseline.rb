@@ -1,8 +1,11 @@
 require '../../pmemkv-ruby/lib/pmemkv/kv_engine'
 
+FILE = '/dev/shm/pmemkv'
+
 def test_engine(engine, count)
   puts "\nTesting #{engine} engine..."
-  kv = KVEngine.new(engine, '/dev/shm/pmemkv', 1024 * 1024 * 1024)
+  File.delete(FILE) if File.exist?(FILE)
+  kv = KVEngine.new(engine, FILE, 1024 * 1024 * 1024)
 
   puts "Put for #{count} sequential values"
   t1 = Time.now

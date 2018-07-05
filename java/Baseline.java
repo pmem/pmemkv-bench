@@ -1,13 +1,16 @@
 import io.pmem.pmemkv.KVEngine;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class Bench {
+public class Baseline {
+
+    public final static String FILE = "/dev/shm/pmemkv";
 
     public static void test_engine(String engine, int count) {
         System.out.printf("%nTesting %s engine...%n", engine);
-        (new File("/dev/shm/pmemkv")).delete();
-        KVEngine kv = new KVEngine(engine, "/dev/shm/pmemkv", 1024 * 1024 * 1024L);
+        (new File(FILE)).delete();
+        KVEngine kv = new KVEngine(engine, FILE, 1024 * 1024 * 1024L);
 
         System.out.printf("Put for %d sequential values%n", count);
         long start = System.currentTimeMillis();
@@ -17,7 +20,7 @@ public class Bench {
         double elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec%n", elapsed);
 
-        System.out.printf("Get for %d sequential values as byte[]%n", count);
+        System.out.printf("Get for %d sequential values%n", count);
         start = System.currentTimeMillis();
         int failures = 0;
         for (int i = 1; i <= count; i++) {
@@ -27,12 +30,12 @@ public class Bench {
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, failures);
 
-        System.out.printf("Each for %d values as byte[]%n", count);
+        System.out.printf("Each for %d values%n", count);
         start = System.currentTimeMillis();
-        StringBuilder x = new StringBuilder();
-        kv.each((k, v) -> x.append('x'));
+        AtomicInteger callbacks = new AtomicInteger(0);
+        kv.each((k, v) -> callbacks.incrementAndGet());
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
-        System.out.printf("  in %f sec, failures=%d%n", elapsed, count - x.length());
+        System.out.printf("  in %f sec, failures=%d%n", elapsed, count - callbacks.get());
 
         System.out.printf("Exists for %d sequential values%n", count);
         start = System.currentTimeMillis();
