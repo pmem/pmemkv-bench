@@ -17,7 +17,7 @@ baseline_cpp: clean
 baseline_java: clean
 	cd java
 	javac -cp ../../pmemkv-java/target/*.jar Baseline.java
-	PMEM_IS_PMEM_FORCE=1 java -cp .:`find ../../pmemkv-java/target -name *.jar` -Djava.library.path=/usr/local/lib Baseline
+	PMEM_IS_PMEM_FORCE=1 java -Xms1G -cp .:`find ../../pmemkv-java/target -name *.jar` -Djava.library.path=/usr/local/lib Baseline
 
 baseline_nodejs: clean
 	cd nodejs
