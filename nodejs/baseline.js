@@ -51,6 +51,7 @@ function test_engine(engine, value) {
 
 // test all engines for all keys & values
 test_engine('blackhole', 'AAAAAAAAAAAAAAAA');
+test_engine('kvtree2', 'AAAAAAAAAAAAAAAA');
 test_engine('btree', 'AAAAAAAAAAAAAAAA');
 
 console.log('\nFinished!\n\n');

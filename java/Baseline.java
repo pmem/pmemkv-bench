@@ -52,14 +52,17 @@ public class Baseline {
     }
 
     public static void main(String[] args) {
-        byte[][] keys = new byte[COUNT][];  // format all keys in advance
+        // format all keys in advance
+        byte[][] keys = new byte[COUNT][];
         for (int i = 0; i < COUNT; i++) {
             keys[i] = Integer.toString(i).getBytes();
         }
 
         // test all engines for all keys & values
         test_engine("blackhole", keys, "AAAAAAAAAAAAAAAA".getBytes());
+        test_engine("kvtree2", keys, "AAAAAAAAAAAAAAAA".getBytes());
         test_engine("btree", keys, "AAAAAAAAAAAAAAAA".getBytes());
+
         System.out.printf("%nFinished!%n%n");
     }
 

@@ -42,6 +42,7 @@ end
 
 # test all engines for all keys & values
 test_engine('blackhole', 'AAAAAAAAAAAAAAAA')
+test_engine('kvtree2', 'AAAAAAAAAAAAAAAA')
 test_engine('btree', 'AAAAAAAAAAAAAAAA')
 
 puts "\nFinished!\n\n"
