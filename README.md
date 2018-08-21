@@ -15,7 +15,7 @@ The `pmemkv_bench` utility provides some standard read & write benchmarks. This 
 based on the `db_bench` utility included with LevelDB and RocksDB, although the
 list of supported parameters is slightly different.
 
-To build pmemkv_bench:
+To build `pmemkv_bench`:
 
 ```
 make bench
