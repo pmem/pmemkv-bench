@@ -46,7 +46,7 @@
 
 static const string USAGE =
         "pmemkv_bench\n"
-        "--engine=<name>            (storage engine name, default: kvtree2)\n"
+        "--engine=<name>            (storage engine name, default: kvtree3)\n"
         "--db=<location>            (path to persistent pool, default: /dev/shm/pmemkv)\n"
         "                           (note: file on DAX filesystem, DAX device, or poolset file)\n"
         "--db_size_in_gb=<integer>  (size of persistent pool to create in GB, default: 0)\n"
@@ -71,7 +71,7 @@ static const char *FLAGS_benchmarks =
         "fillrandom,overwrite,fillseq,readrandom,readseq,readrandom,readmissing,readrandom,deleteseq";
 
 // Default engine name
-static const char *FLAGS_engine = "kvtree2";
+static const char *FLAGS_engine = "kvtree3";
 
 // Number of key/values to place in database
 static int FLAGS_num = 1000000;

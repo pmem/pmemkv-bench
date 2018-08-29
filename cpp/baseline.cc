@@ -26,8 +26,7 @@ void test_engine(const string engine, const std::vector<string> keys, const stri
     std::remove(PATH.c_str());
     KVEngine* kv = KVEngine::Open(engine, PATH, 1024 * 1024 * 1024);
 
-    // Test put operation
-    LOG("Put (sequential)");
+    LOG("Put (sequential series)");
     auto started = current_seconds();
     for (int i = 0; i < keys.size(); i++) {
         if (kv->Put(keys[i], value) != OK) {
@@ -37,8 +36,7 @@ void test_engine(const string engine, const std::vector<string> keys, const stri
     }
     LOG("   in " << current_seconds() - started << " sec");
 
-    // Test get operation
-    LOG("Get (sequential)");
+    LOG("Get (sequential series)");
     int failures = 0;
     started = current_seconds();
     for (int i = 0; i < keys.size(); i++) {
@@ -47,8 +45,7 @@ void test_engine(const string engine, const std::vector<string> keys, const stri
     }
     LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(failures));
 
-    // Test exists operation
-    LOG("Exists (sequential)");
+    LOG("Exists (sequential series)");
     failures = 0;
     started = current_seconds();
     for (int i = 0; i < keys.size(); i++) {
@@ -56,14 +53,25 @@ void test_engine(const string engine, const std::vector<string> keys, const stri
     }
     LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(failures));
 
-    // Test each operation
-    LOG("Each (natural)");
+    LOG("Each (one pass)");
     EachCallbackContext cxt = {keys.size()};
     auto cb = [](void* context, int32_t keybytes, int32_t valuebytes, const char* key, const char* value) {
         ((EachCallbackContext*) context)->failures--;
     };
     started = current_seconds();
     kv->Each(&cxt, cb);
+    LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(cxt.failures));
+
+    LOG("EachLike (one pass, all keys match)");
+    cxt = {keys.size()};
+    started = current_seconds();
+    kv->EachLike(".*", &cxt, cb);
+    LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(cxt.failures));
+
+    LOG("EachLike (one pass, one key matches)");
+    cxt = {1};
+    started = current_seconds();
+    kv->EachLike("1234", &cxt, cb);
     LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(cxt.failures));
 
     delete kv;
@@ -76,7 +84,7 @@ int main() {
 
     // test all engines for all keys & values
     test_engine("blackhole", keys, "AAAAAAAAAAAAAAAA");
-    test_engine("kvtree2", keys, "AAAAAAAAAAAAAAAA");
+    test_engine("kvtree3", keys, "AAAAAAAAAAAAAAAA");
     test_engine("btree", keys, "AAAAAAAAAAAAAAAA");
 
     LOG("\nFinished!\n");

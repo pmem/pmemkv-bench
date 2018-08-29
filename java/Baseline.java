@@ -14,15 +14,13 @@ public class Baseline {
         (new File(FILE)).delete();
         KVEngine kv = new KVEngine(engine, FILE, 1024 * 1024 * 1024L);
 
-        // Test put operation
-        System.out.printf("Put (sequential)%n");
+        System.out.printf("Put (sequential series)%n");
         long start = System.currentTimeMillis();
         for (byte[] k : keys) kv.put(k, value);
         double elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec%n", elapsed);
 
-        // Test get operation
-        System.out.printf("Get (sequential)%n");
+        System.out.printf("Get (sequential series)%n");
         int failures = 0;
         start = System.currentTimeMillis();
         for (byte[] k : keys) {
@@ -32,21 +30,33 @@ public class Baseline {
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, failures);
 
-        // Test exists operation
-        System.out.printf("Exists (sequential)%n");
+        System.out.printf("Exists (sequential series)%n");
         failures = 0;
         start = System.currentTimeMillis();
         for (byte[] k : keys) if (!kv.exists(k)) failures++;
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, failures);
 
-        // Test each operation
-        System.out.printf("Each (natural)%n");
+        System.out.printf("Each (one pass)%n");
         AtomicInteger callbacks = new AtomicInteger(0);
         start = System.currentTimeMillis();
         kv.each((k, v) -> callbacks.incrementAndGet());
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, keys.length - callbacks.get());
+
+        System.out.printf("EachLike (one pass, all keys match)%n");
+        AtomicInteger callbacks2 = new AtomicInteger(0);
+        start = System.currentTimeMillis();
+        kv.eachLike(".*", (k, v) -> callbacks2.incrementAndGet());
+        elapsed = (System.currentTimeMillis() - start) / 1000.0;
+        System.out.printf("  in %f sec, failures=%d%n", elapsed, keys.length - callbacks2.get());
+
+        System.out.printf("EachLike (one pass, one key matches)%n");
+        AtomicInteger callbacks3 = new AtomicInteger(0);
+        start = System.currentTimeMillis();
+        kv.eachLike("1234", (k, v) -> callbacks3.incrementAndGet());
+        elapsed = (System.currentTimeMillis() - start) / 1000.0;
+        System.out.printf("  in %f sec, failures=%d%n", elapsed, 1 - callbacks3.get());
 
         kv.close();
     }
@@ -60,7 +70,7 @@ public class Baseline {
 
         // test all engines for all keys & values
         test_engine("blackhole", keys, "AAAAAAAAAAAAAAAA".getBytes());
-        test_engine("kvtree2", keys, "AAAAAAAAAAAAAAAA".getBytes());
+        test_engine("kvtree3", keys, "AAAAAAAAAAAAAAAA".getBytes());
         test_engine("btree", keys, "AAAAAAAAAAAAAAAA".getBytes());
 
         System.out.printf("%nFinished!%n%n");

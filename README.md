@@ -24,7 +24,7 @@ make bench
 Supported runtime parameters:
 
 ```
---engine=<name>            (storage engine name, default: kvtree2)
+--engine=<name>            (storage engine name, default: kvtree3)
 --db=<location>            (path to persistent pool, default: /dev/shm/pmemkv)
                            (note: file on DAX filesystem, DAX device, or poolset file)
 --db_size_in_gb=<integer>  (size of persistent pool to create in GB, default: 0)
