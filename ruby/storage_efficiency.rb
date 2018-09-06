@@ -25,11 +25,14 @@ def test_engine(engine, size, value)
 
 end
 
-# THESE CRASH! https://github.com/pmem/pmemkv/issues/126
-# test_engine('btree', 64 * 1024 * 1024, '')
-# test_engine('btree', 1024 * 1024 * 1024, '')
-# test_engine('btree', 64 * 1024 * 1024, 'A' * 16)
-# stest_engine('btree', 1024 * 1024 * 1024, 'A' * 16)
+test_engine('btree', 64 * 1024 * 1024, '')
+test_engine('btree', 1024 * 1024 * 1024, '')
+test_engine('btree', 64 * 1024 * 1024, 'A' * 16)
+test_engine('btree', 1024 * 1024 * 1024, 'A' * 16)
+test_engine('btree', 64 * 1024 * 1024, 'A' * 64)
+test_engine('btree', 1024 * 1024 * 1024, 'A' * 64)
+test_engine('btree', 64 * 1024 * 1024, 'A' * 128)
+test_engine('btree', 1024 * 1024 * 1024, 'A' * 128)
 
 test_engine('kvtree3', 64 * 1024 * 1024, '')
 test_engine('kvtree3', 1024 * 1024 * 1024, '')
