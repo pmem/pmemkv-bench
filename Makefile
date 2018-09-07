@@ -16,6 +16,12 @@ baseline_c: reset
 	echo 'Build and run baseline.c'
 	cd .. && $(MAKE) reset
 
+example_c: reset
+	cd c
+	gcc example.c -o example /usr/local/lib/libpmemkv.so -I/usr/local/include -DOS_LINUX -fno-builtin-memcmp -march=native -ldl -lpthread
+	PMEM_IS_PMEM_FORCE=1 ./example
+	cd .. && $(MAKE) reset
+
 baseline_cpp: reset
 	cd cpp
 	g++ baseline.cc -o baseline /usr/local/lib/libpmemkv.so -I/usr/local/include -O2 -std=c++11 -DOS_LINUX -fno-builtin-memcmp -march=native -ldl -lpthread

@@ -55,7 +55,7 @@ void test_engine(const string engine, const std::vector<string> keys, const stri
 
     LOG("Each (one pass)");
     EachCallbackContext cxt = {keys.size()};
-    auto cb = [](void* context, int32_t keybytes, int32_t valuebytes, const char* key, const char* value) {
+    auto cb = [](void* context, int32_t keybytes, const char* key, int32_t valuebytes, const char* value) {
         ((EachCallbackContext*) context)->failures--;
     };
     started = current_seconds();
