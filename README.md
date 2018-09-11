@@ -102,3 +102,12 @@ make example_java
 make example_nodejs
 make example_ruby
 ```
+
+Storage Efficiency
+------------------
+
+This script reports the storage efficiency for different engines and value sizes.
+
+```
+make storage_efficiency
+```
