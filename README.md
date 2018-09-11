@@ -43,6 +43,8 @@ Supported runtime parameters:
     readmissing            (read N missing values in random key order)
     deleteseq              (delete N values in sequential key order)
     deleterandom           (delete N values in random key order)
+    readwhilewriting       (1 writer, N threads doing random reads)
+    readrandomwriterandom  (N threads doing random-read, random-write)
 ```
 
 Benchmarking on emulated persistent memory:
