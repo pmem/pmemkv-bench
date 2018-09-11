@@ -1,6 +1,6 @@
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file. See the AUTHORS file for names of contributors.
+// found in the LICENSE-BSD file. See the AUTHORS file for names of contributors.
 //
 // Slice is a simple structure containing a pointer into some external
 // storage and a size.  The user of a Slice must ensure that the slice
