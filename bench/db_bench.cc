@@ -34,10 +34,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <inttypes.h>
 #include <sys/types.h>
 #include <cstdio>
 #include <cstdlib>
+#include <chrono>
+
 #include "leveldb/env.h"
+#include "testutil.h"
 #include "port/port_posix.h"
 #include "histogram.h"
 #include "mutexlock.h"
@@ -64,7 +68,9 @@ static const string USAGE =
         "    readrandom             (read N values in random key order)\n"
         "    readmissing            (read N missing values in random key order)\n"
         "    deleteseq              (delete N values in sequential key order)\n"
-        "    deleterandom           (delete N values in random key order)\n";
+        "    deleterandom           (delete N values in random key order)\n"
+        "    readwhilewriting       (1 writer, N threads doing random reads)\n"
+        "    readrandomwriterandom  (N threads doing random-read, random-write)\n";
 
 // Default list of comma-separated operations to run
 static const char *FLAGS_benchmarks =
@@ -82,6 +88,8 @@ static int FLAGS_reads = -1;
 // Number of concurrent threads to run.
 static int FLAGS_threads = 1;
 
+static int FLAGS_key_size = 16;
+
 // Size of each value
 static int FLAGS_value_size = 100;
 
@@ -93,6 +101,14 @@ static const char *FLAGS_db = NULL;
 
 // Use following size when opening the database.
 static int FLAGS_db_size_in_gb = 0;
+
+static const double FLAGS_compression_ratio = 1.0;
+
+static const int FLAGS_ops_between_duration_checks = 1000;
+
+static const int FLAGS_duration = 0;
+
+static const int FLAGS_readwritepercent = 90;
 
 using namespace leveldb;
 
@@ -114,6 +130,48 @@ static Slice TrimSpace(Slice s) {
 
 #endif
 
+
+// Helper for quickly generating random data.
+class RandomGenerator {
+ private:
+  std::string data_;
+  unsigned int pos_;
+
+ public:
+  RandomGenerator() {
+    // We use a limited amount of data over and over again and ensure
+    // that it is larger than the compression window (32KB), and also
+    // large enough to serve all typical value sizes we want to write.
+    Random rnd(301);
+    std::string piece;
+    while (data_.size() < (unsigned)std::max(1048576, FLAGS_value_size)) {
+      // Add a short fragment that is as compressible as specified
+      // by FLAGS_compression_ratio.
+      test::CompressibleString(&rnd, FLAGS_compression_ratio, 100, &piece);
+      data_.append(piece);
+    }
+    pos_ = 0;
+  }
+
+  Slice Generate(unsigned int len) {
+    assert(len <= data_.size());
+    if (pos_ + len > data_.size()) {
+      pos_ = 0;
+    }
+    pos_ += len;
+    return Slice(data_.data() + pos_ - len, len);
+  }
+
+  Slice GenerateWithTTL(unsigned int len) {
+    assert(len <= data_.size());
+    if (pos_ + len > data_.size()) {
+      pos_ = 0;
+    }
+    pos_ += len;
+    return Slice(data_.data() + pos_ - len, len);
+  }
+};
+
 static void AppendWithSpace(std::string *str, Slice msg) {
     if (msg.empty()) return;
     if (!str->empty()) {
@@ -121,6 +179,15 @@ static void AppendWithSpace(std::string *str, Slice msg) {
     }
     str->append(msg.data(), msg.size());
 }
+
+enum OperationType : unsigned char {
+    kRead = 0,
+    kWrite,
+    kDelete,
+    kSeek,
+    kMerge,
+    kUpdate,
+};
 
 class Stats {
 private:
@@ -133,6 +200,7 @@ private:
     double last_op_finish_;
     Histogram hist_;
     std::string message_;
+    bool exclude_from_merge_;
 
 public:
     Stats() { Start(); }
@@ -147,9 +215,14 @@ public:
         start_ = g_env->NowMicros();
         finish_ = start_;
         message_.clear();
+        // When set, stats from this thread won't be merged with others.
+        exclude_from_merge_ = false;
     }
 
     void Merge(const Stats &other) {
+        if (other.exclude_from_merge_)
+            return;
+
         hist_.Merge(other.hist_);
         done_ += other.done_;
         bytes_ += other.bytes_;
@@ -169,6 +242,8 @@ public:
     void AddMessage(Slice msg) {
         AppendWithSpace(&message_, msg);
     }
+
+    void SetExcludeFromMerge() { exclude_from_merge_ = true; }
 
     void FinishedSingleOp() {
         if (FLAGS_histogram) {
@@ -262,23 +337,63 @@ struct ThreadState {
     }
 };
 
+class Duration {
+    typedef std::chrono::high_resolution_clock::time_point time_point;
+public:
+    Duration(uint64_t max_seconds, int64_t max_ops, int64_t ops_per_stage = 0) {
+        max_seconds_ = max_seconds;
+        max_ops_= max_ops;
+        ops_per_stage_ = (ops_per_stage > 0) ? ops_per_stage : max_ops;
+        ops_ = 0;
+        start_at_ = std::chrono::high_resolution_clock::now();
+    }
+
+    int64_t GetStage() { return std::min(ops_, max_ops_ - 1) / ops_per_stage_; }
+
+    bool Done(int64_t increment) {
+        if (increment <= 0) increment = 1;    // avoid Done(0) and infinite loops
+        ops_ += increment;
+
+        if (max_seconds_) {
+            // Recheck every appx 1000 ops (exact iff increment is factor of 1000)
+            auto granularity = FLAGS_ops_between_duration_checks;
+            if ((ops_ / granularity) != ((ops_ - increment) / granularity)) {
+                time_point now = std::chrono::high_resolution_clock::now();
+                return std::chrono::duration_cast<std::chrono::milliseconds>(now - start_at_).count() >= max_seconds_;
+            } else {
+                return false;
+            }
+        } else {
+            return ops_ > max_ops_;
+        }
+    }
+
+private:
+    uint64_t max_seconds_;
+    int64_t max_ops_;
+    int64_t ops_per_stage_;
+    int64_t ops_;
+    time_point start_at_;
+};
+
 class Benchmark {
 private:
     pmemkv::KVEngine *kv_;
     int num_;
     int value_size_;
+    int key_size_;
     int reads_;
+    int64_t readwrites_;
 
     void PrintHeader() {
-        const int kKeySize = 16;
         PrintEnvironment();
         fprintf(stdout, "Path:       %s\n", FLAGS_db);
         fprintf(stdout, "Engine:     %s\n", FLAGS_engine);
-        fprintf(stdout, "Keys:       %d bytes each\n", kKeySize);
+        fprintf(stdout, "Keys:       %d bytes each\n", FLAGS_key_size);
         fprintf(stdout, "Values:     %d bytes each\n", FLAGS_value_size);
         fprintf(stdout, "Entries:    %d\n", num_);
         fprintf(stdout, "RawSize:    %.1f MB (estimated)\n",
-                ((static_cast<int64_t>(kKeySize + FLAGS_value_size) * num_)
+                ((static_cast<int64_t>(FLAGS_key_size + FLAGS_value_size) * num_)
                  / 1048576.0));
         PrintWarnings();
         fprintf(stdout, "------------------------------------------------\n");
@@ -334,11 +449,24 @@ public:
             kv_(NULL),
             num_(FLAGS_num),
             value_size_(FLAGS_value_size),
-            reads_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads) {
+            key_size_(FLAGS_key_size),
+            reads_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
+            readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads) {
     }
 
     ~Benchmark() {
         delete kv_;
+    }
+
+    Slice AllocateKey(std::unique_ptr<const char[]>& key_guard) {
+        const char* tmp = new char[key_size_];
+        key_guard.reset(tmp);
+        return Slice(key_guard.get(), key_size_);
+    }
+
+    void GenerateKeyFromInt(uint64_t v, int64_t num_keys, Slice* key) {
+        char* str = const_cast<char*>(key->data());
+        snprintf(str, key->size(), "%016lu", v);
     }
 
     void Run() {
@@ -383,6 +511,11 @@ public:
                 method = &Benchmark::DeleteSeq;
             } else if (name == Slice("deleterandom")) {
                 method = &Benchmark::DeleteRandom;
+            } else if (name == Slice("readwhilewriting")) {
+                ++num_threads;
+                method = &Benchmark::ReadWhileWriting;
+            } else if (name == Slice("readrandomwriterandom")) {
+                method = &Benchmark::ReadRandomWriteRandom;
             } else {
                 if (name != Slice()) {  // No error message for empty name
                     fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
@@ -581,6 +714,109 @@ private:
 
     void DeleteRandom(ThreadState *thread) {
         DoDelete(thread, false);
+    }
+
+    void BGWriter(ThreadState* thread, enum OperationType write_merge) {
+        // Special thread that keeps writing until other threads are done.
+        RandomGenerator gen;
+        int64_t bytes = 0;
+
+        // Don't merge stats from this thread with the readers.
+        thread->stats.SetExcludeFromMerge();
+
+        std::unique_ptr<const char[]> key_guard;
+        Slice key = AllocateKey(key_guard);
+        uint32_t written = 0;
+        bool hint_printed = false;
+
+        while (true) {
+            {
+                MutexLock l(&thread->shared->mu);
+
+                if (thread->shared->num_done + 1 >= thread->shared->num_initialized) {
+                    // Finish the write immediately
+                    break;
+                }
+            }
+
+            GenerateKeyFromInt(thread->rand.Next() % FLAGS_num, FLAGS_num, &key);
+            KVStatus s;
+
+            if (write_merge == kWrite) {
+                s = kv_->Put(key.ToString(), gen.Generate(value_size_).ToString());
+            } else {
+                fprintf(stderr, "Merge operation not supported\n");
+                exit(1);
+            }
+            written++;
+
+            if (s != OK) {
+                fprintf(stderr, "Put error\n");
+                exit(1);
+            }
+            bytes += key.size() + value_size_;
+        }
+        thread->stats.AddBytes(bytes);
+    }
+
+    void ReadWhileWriting(ThreadState* thread) {
+        if (thread->tid > 0) {
+            ReadRandom(thread);
+        } else {
+            BGWriter(thread, kWrite);
+        }
+    }
+
+    void ReadRandomWriteRandom(ThreadState* thread) {
+        RandomGenerator gen;
+        std::string value;
+        int64_t found = 0;
+        int get_weight = 0;
+        int put_weight = 0;
+        int64_t reads_done = 0;
+        int64_t writes_done = 0;
+        Duration duration(FLAGS_duration, readwrites_);
+
+        std::unique_ptr<const char[]> key_guard;
+        Slice key = AllocateKey(key_guard);
+
+        // the number of iterations is the larger of read_ or write_
+        while (!duration.Done(1)) {
+            GenerateKeyFromInt(thread->rand.Next() % FLAGS_num, FLAGS_num, &key);
+            if (get_weight == 0 && put_weight == 0) {
+                // one batch completed, reinitialize for next batch
+                get_weight = FLAGS_readwritepercent;
+                put_weight = 100 - get_weight;
+            }
+            if (get_weight > 0) {
+                KVStatus s = kv_->Get(key.ToString(), &value);
+                if (s == NOT_FOUND) {
+                    found++;
+                } else if (s != OK) {
+                    fprintf(stderr, "get error\n");
+                }
+
+                get_weight--;
+                reads_done++;
+                thread->stats.FinishedSingleOp();
+            } else if (put_weight > 0) {
+                // then do all the corresponding number of puts
+                // for all the gets we have done earlier
+                KVStatus s = kv_->Put(key.ToString(), gen.Generate(value_size_).ToString());
+                if (s != OK) {
+                    fprintf(stderr, "put error\n");
+                    exit(1);
+                }
+                put_weight--;
+                writes_done++;
+                thread->stats.FinishedSingleOp();
+            }
+        }
+        char msg[100];
+        snprintf(msg, sizeof(msg), "( reads:%" PRIu64 " writes:%" PRIu64 \
+                " total:%" PRIu64 " found:%" PRIu64 ")",
+                reads_done, writes_done, readwrites_, found);
+        thread->stats.AddMessage(msg);
     }
 };
 
