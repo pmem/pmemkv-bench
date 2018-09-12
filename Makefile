@@ -16,22 +16,10 @@ baseline_c: reset
 	echo 'Build and run baseline.c'
 	cd .. && $(MAKE) reset
 
-example_c: reset
-	cd c
-	gcc example.c -o example /usr/local/lib/libpmemkv.so -I/usr/local/include -DOS_LINUX -fno-builtin-memcmp -march=native -ldl -lpthread
-	PMEM_IS_PMEM_FORCE=1 ./example
-	cd .. && $(MAKE) reset
-
 baseline_cpp: reset
 	cd cpp
 	g++ baseline.cc -o baseline /usr/local/lib/libpmemkv.so -I/usr/local/include -O2 -std=c++11 -DOS_LINUX -fno-builtin-memcmp -march=native -ldl -lpthread
 	PMEM_IS_PMEM_FORCE=1 ./baseline
-	cd .. && $(MAKE) reset
-
-example_cpp: reset
-	cd cpp
-	g++ example.cc -o example /usr/local/lib/libpmemkv.so -I/usr/local/include -O2 -std=c++11 -DOS_LINUX -fno-builtin-memcmp -march=native -ldl -lpthread
-	PMEM_IS_PMEM_FORCE=1 ./example
 	cd .. && $(MAKE) reset
 
 baseline_java: reset
@@ -50,7 +38,36 @@ baseline_ruby: reset
 	PMEM_IS_PMEM_FORCE=1 ruby baseline.rb
 	cd .. && $(MAKE) reset
 
+example_c: reset
+	cd c
+	gcc example.c -o example /usr/local/lib/libpmemkv.so -I/usr/local/include -DOS_LINUX -fno-builtin-memcmp -march=native -ldl -lpthread
+	PMEM_IS_PMEM_FORCE=1 ./example
+	cd .. && $(MAKE) reset
+
+example_cpp: reset
+	cd cpp
+	g++ example.cc -o example /usr/local/lib/libpmemkv.so -I/usr/local/include -O2 -std=c++11 -DOS_LINUX -fno-builtin-memcmp -march=native -ldl -lpthread
+	PMEM_IS_PMEM_FORCE=1 ./example
+	cd .. && $(MAKE) reset
+
+example_java: reset
+	cd java
+	javac -cp ../../pmemkv-java/target/*.jar Example.java
+	PMEM_IS_PMEM_FORCE=1 java -ea -Xms1G -cp .:`find ../../pmemkv-java/target -name *.jar` -Djava.library.path=/usr/local/lib Example
+	cd .. && $(MAKE) reset
+
+example_nodejs: reset
+	cd nodejs
+	PMEM_IS_PMEM_FORCE=1 node example.js
+	cd .. && $(MAKE) reset
+
+example_ruby: reset
+	cd ruby
+	PMEM_IS_PMEM_FORCE=1 ruby example.rb
+	cd .. && $(MAKE) reset
+
 storage_efficiency: reset
 	cd ruby
 	PMEM_IS_PMEM_FORCE=1 ruby storage_efficiency.rb
 	cd .. && $(MAKE) reset
+

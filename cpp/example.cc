@@ -11,8 +11,7 @@ int main() {
 
     LOG("Putting new key");
     KVStatus s = kv->Put("key1", "value1");
-    assert(s == OK);
-    assert(kv->Count() == 1);
+    assert(s == OK && kv->Count() == 1);
 
     LOG("Reading key back");
     string value;
@@ -28,12 +27,9 @@ int main() {
 
     LOG("Removing existing key");
     s = kv->Remove("key1");
-    assert(s == OK);
-    assert(!kv->Exists("key1"));
+    assert(s == OK && !kv->Exists("key1"));
 
     LOG("Closing datastore");
     delete kv;
-
-    LOG("Finished successfully");
     return 0;
 }
