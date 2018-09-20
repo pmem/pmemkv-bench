@@ -22,7 +22,7 @@ struct CallbackContext {
 
 void test_engine(const string engine, const std::vector<string> keys, const string value) {
     LOG("\nTesting " << engine << " for " + to_string(keys.size()) << " keys, value size is "
-                     << value.length() << "...\n");
+                     << value.length() << "...");
     std::remove(PATH.c_str());
     KVEngine* kv = KVEngine::Open(engine, PATH, 1024 * 1024 * 1024);
 
