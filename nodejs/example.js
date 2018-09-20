@@ -17,7 +17,7 @@ assert(kv.get('key1') === 'value1');
 console.log('Iterating existing keys');
 kv.put('key2', 'value2');
 kv.put('key3', 'value3');
-kv.each((k, v) => console.log(`  visited: ${k}`));
+kv.all((k) => console.log(`  visited: ${k}`));
 
 console.log('Removing existing key');
 kv.remove('key1');

@@ -35,6 +35,13 @@ function test_engine(engine, value) {
     console.timeEnd("  in");
     console.log(`  failures: ${failures}`);
 
+    console.log(`All (one pass)`);
+    failures = COUNT;
+    console.time("  in");
+    kv.all(() => failures--);
+    console.timeEnd("  in");
+    console.log(`  failures: ${failures}`);
+
     console.log(`Each (one pass)`);
     failures = COUNT;
     console.time("  in");
@@ -61,7 +68,9 @@ function test_engine(engine, value) {
 
 // test all engines for all keys & values
 test_engine('blackhole', 'AAAAAAAAAAAAAAAA');
-test_engine('kvtree3', 'AAAAAAAAAAAAAAAA');
 test_engine('btree', 'AAAAAAAAAAAAAAAA');
+test_engine('kvtree3', 'AAAAAAAAAAAAAAAA');
+test_engine('kvtree3', 'A'.repeat(200));
+test_engine('kvtree3', 'A'.repeat(800));
 
 console.log('\nFinished!\n\n');

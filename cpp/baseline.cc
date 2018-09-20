@@ -16,7 +16,7 @@ static double current_seconds() {
     return (tv.tv_sec) + (double) (tv.tv_usec) / 1000000;
 }
 
-struct EachCallbackContext {
+struct CallbackContext {
     unsigned long failures;
 };
 
@@ -53,10 +53,19 @@ void test_engine(const string engine, const std::vector<string> keys, const stri
     }
     LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(failures));
 
+    LOG("All (one pass)");
+    CallbackContext cxt = {keys.size()};
+    auto cba = [](void* context, int keybytes, const char* key) {
+        ((CallbackContext*) context)->failures--;
+    };
+    started = current_seconds();
+    kv->All(&cxt, cba);
+    LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(cxt.failures));
+
     LOG("Each (one pass)");
-    EachCallbackContext cxt = {keys.size()};
-    auto cb = [](void* context, int32_t keybytes, const char* key, int32_t valuebytes, const char* value) {
-        ((EachCallbackContext*) context)->failures--;
+    cxt = {keys.size()};
+    auto cb = [](void* context, int keybytes, const char* key, int valuebytes, const char* value) {
+        ((CallbackContext*) context)->failures--;
     };
     started = current_seconds();
     kv->Each(&cxt, cb);
@@ -84,8 +93,10 @@ int main() {
 
     // test all engines for all keys & values
     test_engine("blackhole", keys, "AAAAAAAAAAAAAAAA");
-    test_engine("kvtree3", keys, "AAAAAAAAAAAAAAAA");
     test_engine("btree", keys, "AAAAAAAAAAAAAAAA");
+    test_engine("kvtree3", keys, "AAAAAAAAAAAAAAAA");
+    test_engine("kvtree3", keys, std::string(200, 'A'));
+    test_engine("kvtree3", keys, std::string(800, 'A'));
 
     LOG("\nFinished!\n");
     return 0;

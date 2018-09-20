@@ -37,8 +37,15 @@ public class Baseline {
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, failures);
 
-        System.out.printf("Each (one pass)%n");
+        System.out.printf("All (one pass)%n");
         AtomicInteger callbacks = new AtomicInteger(0);
+        start = System.currentTimeMillis();
+        kv.all((k) -> callbacks.incrementAndGet());
+        elapsed = (System.currentTimeMillis() - start) / 1000.0;
+        System.out.printf("  in %f sec, failures=%d%n", elapsed, keys.length - callbacks.get());
+
+        System.out.printf("Each (one pass)%n");
+        callbacks.set(0);
         start = System.currentTimeMillis();
         kv.each((k, v) -> callbacks.incrementAndGet());
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
@@ -70,8 +77,10 @@ public class Baseline {
 
         // test all engines for all keys & values
         test_engine("blackhole", keys, "AAAAAAAAAAAAAAAA".getBytes());
-        test_engine("kvtree3", keys, "AAAAAAAAAAAAAAAA".getBytes());
         test_engine("btree", keys, "AAAAAAAAAAAAAAAA".getBytes());
+        test_engine("kvtree3", keys, "AAAAAAAAAAAAAAAA".getBytes());
+        test_engine("kvtree3", keys, (new String(new char[200]).replace("\0", "A")).getBytes());
+        test_engine("kvtree3", keys, (new String(new char[800]).replace("\0", "A")).getBytes());
 
         System.out.printf("%nFinished!%n%n");
     }

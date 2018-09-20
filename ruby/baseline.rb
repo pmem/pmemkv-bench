@@ -31,6 +31,12 @@ def test_engine(engine, value)
   end
   puts "   in #{Time.now - t1} sec, failures=#{failures}"
 
+  puts "All (one pass)"
+  failures = COUNT
+  t1 = Time.now
+  kv.all {|k| failures -= 1}
+  puts "   in #{Time.now - t1} sec, failures=#{failures}"
+
   puts "Each (one pass)"
   failures = COUNT
   t1 = Time.now
@@ -54,7 +60,9 @@ end
 
 # test all engines for all keys & values
 test_engine('blackhole', 'AAAAAAAAAAAAAAAA')
-test_engine('kvtree3', 'AAAAAAAAAAAAAAAA')
 test_engine('btree', 'AAAAAAAAAAAAAAAA')
+test_engine('kvtree3', 'AAAAAAAAAAAAAAAA')
+test_engine('kvtree3', 'A' * 200)
+test_engine('kvtree3', 'A' * 800)
 
 puts "\nFinished!\n\n"

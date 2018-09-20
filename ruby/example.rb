@@ -17,7 +17,7 @@ assert kv.get('key1').eql?('value1')
 puts 'Iterating existing keys'
 kv.put('key2', 'value2')
 kv.put('key3', 'value3')
-kv.each_string {|k, v| puts "  visited: #{k}"}
+kv.all_strings {|k| puts "  visited: #{k}"}
 
 puts 'Removing existing key'
 kv.remove('key1')
