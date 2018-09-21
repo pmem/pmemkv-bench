@@ -1,11 +1,8 @@
+*.bin
 *.class
 *.d
 .DS_Store
 .idea/
 cmake-build-debug/
-c/baseline
-c/example
-cpp/baseline
-cpp/example
 googletest-*.zip
 pmemkv_bench

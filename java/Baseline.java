@@ -5,14 +5,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Baseline {
 
+    public final static long SIZE = 1024 * 1024 * 1024L;
     public final static int COUNT = 1000000;
     public final static String FILE = "/dev/shm/pmemkv";
 
     public static void test_engine(String engine, byte[][] keys, byte[] value) {
-        System.out.printf("%nTesting %s engine for %s keys, value size is %s...%n",
-                engine, COUNT, value.length);
+        System.out.printf("%nTesting %s engine for %s keys, value size is %s...%n", engine, COUNT, value.length);
         (new File(FILE)).delete();
-        KVEngine kv = new KVEngine(engine, FILE, 1024 * 1024 * 1024L);
+        KVEngine kv = new KVEngine(engine, FILE, SIZE);
 
         System.out.printf("Put (sequential series)%n");
         long start = System.currentTimeMillis();
