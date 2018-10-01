@@ -49,20 +49,6 @@ function test_engine(engine, value) {
     console.timeEnd("  in");
     console.log(`  failures: ${failures}`);
 
-    console.log(`EachLike (one pass, all keys match)`);
-    failures = COUNT;
-    console.time("  in");
-    kv.each_like('.*', () => failures--);
-    console.timeEnd("  in");
-    console.log(`  failures: ${failures}`);
-
-    console.log(`EachLike (one pass, one key matches)`);
-    failures = 1;
-    console.time("  in");
-    kv.each_like('1234', () => failures--);
-    console.timeEnd("  in");
-    console.log(`  failures: ${failures}`);
-
     kv.close();
 }
 

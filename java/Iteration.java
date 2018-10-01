@@ -34,20 +34,6 @@ public class Iteration {
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks.get());
 
-        System.out.printf("EachLike (one pass, all keys match)%n");
-        AtomicInteger callbacks2 = new AtomicInteger(0);
-        start = System.currentTimeMillis();
-        kv.eachLike(".*", (k, v) -> callbacks2.incrementAndGet());
-        elapsed = (System.currentTimeMillis() - start) / 1000.0;
-        System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks2.get());
-
-        System.out.printf("EachLike (one pass, one key matches)%n");
-        AtomicInteger callbacks3 = new AtomicInteger(0);
-        start = System.currentTimeMillis();
-        kv.eachLike("1234", (k, v) -> callbacks3.incrementAndGet());
-        elapsed = (System.currentTimeMillis() - start) / 1000.0;
-        System.out.printf("  in %f sec, failures=%d%n", elapsed, 1 - callbacks3.get());
-
         kv.close();
     }
 

@@ -55,18 +55,6 @@ void test_engine(const string engine, const string value) {
     kv->Each(&cxt, cb);
     LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(cxt.failures));
 
-    LOG("EachLike (one pass, all keys match)");
-    cxt = {COUNT};
-    started = current_seconds();
-    kv->EachLike(".*", &cxt, cb);
-    LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(cxt.failures));
-
-    LOG("EachLike (one pass, one key matches)");
-    cxt = {1};
-    started = current_seconds();
-    kv->EachLike("1234", &cxt, cb);
-    LOG("   in " << current_seconds() - started << " sec, failures=" + to_string(cxt.failures));
-
     delete kv;
 }
 

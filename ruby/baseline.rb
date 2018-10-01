@@ -43,18 +43,6 @@ def test_engine(engine, value)
   kv.each {|k, v| failures -= 1}
   puts "   in #{Time.now - t1} sec, failures=#{failures}"
 
-  puts "EachLike (one pass, all keys match)"
-  failures = COUNT
-  t1 = Time.now
-  kv.each_like('.*') { |k, v| failures -= 1}
-  puts "   in #{Time.now - t1} sec, failures=#{failures}"
-
-  puts "EachLike (one pass, one key matches)"
-  failures = 1
-  t1 = Time.now
-  kv.each_like('1234') { |k, v| failures -= 1}
-  puts "   in #{Time.now - t1} sec, failures=#{failures}"
-
   kv.close
 end
 
