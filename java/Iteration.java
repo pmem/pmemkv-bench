@@ -1,6 +1,7 @@
 import io.pmem.pmemkv.KVEngine;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Iteration {
@@ -20,17 +21,45 @@ public class Iteration {
         double elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec%n", elapsed);
 
-        System.out.printf("All (one pass)%n");
+        System.out.printf("All buffers (one pass)%n");
         AtomicInteger callbacks = new AtomicInteger(0);
         start = System.currentTimeMillis();
-        kv.all((k) -> callbacks.incrementAndGet());
+        kv.all((ByteBuffer key) -> callbacks.incrementAndGet());
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks.get());
 
-        System.out.printf("Each (one pass)%n");
+        System.out.printf("Each buffer (one pass)%n");
         callbacks.set(0);
         start = System.currentTimeMillis();
-        kv.each((k, v) -> callbacks.incrementAndGet());
+        kv.each((ByteBuffer kbuf, ByteBuffer vbuf) -> callbacks.incrementAndGet());
+        elapsed = (System.currentTimeMillis() - start) / 1000.0;
+        System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks.get());
+
+        System.out.printf("All byte arrays (one pass)%n");
+        callbacks.set(0);
+        start = System.currentTimeMillis();
+        kv.all((String key) -> callbacks.incrementAndGet());
+        elapsed = (System.currentTimeMillis() - start) / 1000.0;
+        System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks.get());
+
+        System.out.printf("Each byte array (one pass)%n");
+        callbacks.set(0);
+        start = System.currentTimeMillis();
+        kv.each((byte[] k, byte[] v) -> callbacks.incrementAndGet());
+        elapsed = (System.currentTimeMillis() - start) / 1000.0;
+        System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks.get());
+
+        System.out.printf("All strings (one pass)%n");
+        callbacks.set(0);
+        start = System.currentTimeMillis();
+        kv.all((String kstr) -> callbacks.incrementAndGet());
+        elapsed = (System.currentTimeMillis() - start) / 1000.0;
+        System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks.get());
+
+        System.out.printf("Each string (one pass)%n");
+        callbacks.set(0);
+        start = System.currentTimeMillis();
+        kv.each((String kstr, String vstr) -> callbacks.incrementAndGet());
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks.get());
 

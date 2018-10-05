@@ -40,14 +40,14 @@ public class Baseline {
         System.out.printf("All (one pass)%n");
         AtomicInteger callbacks = new AtomicInteger(0);
         start = System.currentTimeMillis();
-        kv.all((k) -> callbacks.incrementAndGet());
+        kv.all((byte[] k) -> callbacks.incrementAndGet());
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, keys.length - callbacks.get());
 
         System.out.printf("Each (one pass)%n");
         callbacks.set(0);
         start = System.currentTimeMillis();
-        kv.each((k, v) -> callbacks.incrementAndGet());
+        kv.each((byte[] k, byte[] v) -> callbacks.incrementAndGet());
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, keys.length - callbacks.get());
 
