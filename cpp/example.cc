@@ -6,8 +6,8 @@
 using namespace pmemkv;
 
 int main() {
-    LOG("Opening datastore");
-    KVEngine* kv = KVEngine::Open("kvtree3", "/dev/shm/pmemkv", 1073741824);  // 1 GB pool
+    LOG("Starting engine");
+    KVEngine* kv = KVEngine::Start("kvtree3", "{\"path\":\"/dev/shm/pmemkv\"}");
 
     LOG("Putting new key");
     KVStatus s = kv->Put("key1", "value1");
@@ -29,7 +29,7 @@ int main() {
     s = kv->Remove("key1");
     assert(s == OK && !kv->Exists("key1"));
 
-    LOG("Closing datastore");
+    LOG("Stopping engine");
     delete kv;
     return 0;
 }

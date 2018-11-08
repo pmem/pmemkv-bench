@@ -6,14 +6,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Iteration {
 
-    public final static long SIZE = 15 * 1024 * 1024 * 1024L;
     public final static int COUNT = 100000000;
-    public final static String FILE = "/dev/shm/pmemkv";
+    public final static String PATH = "/dev/shm/pmemkv";
 
     public static void test_engine(String engine, byte[] value) {
         System.out.printf("%nTesting %s engine for %s keys, value size is %s...%n", engine, COUNT, value.length);
-        (new File(FILE)).delete();
-        KVEngine kv = new KVEngine(engine, FILE, SIZE);
+        (new File(PATH)).delete();
+        KVEngine kv = new KVEngine(engine, "{\"path\":\"" + PATH + "\",\"size\":16106127360}");
 
         System.out.printf("Put (sequential series)%n");
         long start = System.currentTimeMillis();
@@ -63,7 +62,7 @@ public class Iteration {
         elapsed = (System.currentTimeMillis() - start) / 1000.0;
         System.out.printf("  in %f sec, failures=%d%n", elapsed, COUNT - callbacks.get());
 
-        kv.close();
+        kv.stop();
     }
 
     public static void main(String[] args) {

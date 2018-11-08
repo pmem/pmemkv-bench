@@ -1,12 +1,12 @@
 require '../../pmemkv-ruby/lib/pmemkv/kv_engine'
 
 COUNT = 1000000
-FILE = '/dev/shm/pmemkv'
+PATH = '/dev/shm/pmemkv'
 
 def test_engine(engine, value)
   puts "\nTesting #{engine} engine for #{COUNT} keys, value size is #{value.length}..."
-  File.delete(FILE) if File.exist?(FILE)
-  kv = KVEngine.new(engine, FILE, 1024 * 1024 * 1024)
+  File.delete(PATH) if File.exist?(PATH)
+  kv = KVEngine.new(engine, "{\"path\":\"#{PATH}\"}")
 
   puts "Put (sequential series)"
   t1 = Time.now
@@ -43,7 +43,7 @@ def test_engine(engine, value)
   kv.each {|k, v| failures -= 1}
   puts "   in #{Time.now - t1} sec, failures=#{failures}"
 
-  kv.close
+  kv.stop
 end
 
 # test all engines for all keys & values

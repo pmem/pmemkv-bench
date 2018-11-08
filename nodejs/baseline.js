@@ -2,12 +2,12 @@ const fs = require('fs');
 const KVEngine = require('../../pmemkv-nodejs/lib/kv_engine');
 
 const COUNT = 1000000;
-const FILE = '/dev/shm/pmemkv';
+const PATH = '/dev/shm/pmemkv';
 
 function test_engine(engine, value) {
     console.log(`\nTesting ${engine} engine for ${COUNT} keys, value size is ${value.length}...`);
-    if (fs.existsSync(FILE)) fs.unlinkSync(FILE);
-    const kv = new KVEngine(engine, FILE, 1024 * 1024 * 1024);
+    if (fs.existsSync(PATH)) fs.unlinkSync(PATH);
+    const kv = new KVEngine(engine, `{"path":"${PATH}"}`);
 
     console.log(`Put (sequential series)`);
     console.time("  in");
@@ -49,7 +49,7 @@ function test_engine(engine, value) {
     console.timeEnd("  in");
     console.log(`  failures: ${failures}`);
 
-    kv.close();
+    kv.stop();
 }
 
 // test all engines for all keys & values

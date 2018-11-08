@@ -6,7 +6,7 @@ def test_engine(engine, size, value)
   puts "\nTesting #{engine} engine: size=#{size}, value.length=#{value.length}"
 
   File.delete(PATH) if File.exist?(PATH)
-  kv = KVEngine.new(engine, PATH, size)
+  kv = KVEngine.new(engine, "{\"path\":\"#{PATH}\",\"size\":#{size}}")
   last_key = 0
   total_chars = 0
   begin
@@ -21,7 +21,7 @@ def test_engine(engine, size, value)
     puts "   keys = #{last_key}"
     puts "   efficiency = #{total_chars / size.to_f}"
   end
-  kv.close
+  kv.stop
 
 end
 

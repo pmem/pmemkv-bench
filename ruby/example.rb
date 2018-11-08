@@ -4,8 +4,8 @@ def assert(condition)
   raise RuntimeError.new('Assert failed') unless condition
 end
 
-puts 'Opening datastore'
-kv = KVEngine.new('kvtree3', '/dev/shm/pmemkv', 1073741824) # 1 GB pool
+puts 'Starting engine'
+kv = KVEngine.new('kvtree3', '{"path":"/dev/shm/pmemkv"}')
 
 puts 'Putting new key'
 kv.put('key1', 'value1')
@@ -23,5 +23,5 @@ puts 'Removing existing key'
 kv.remove('key1')
 assert !kv.exists('key1')
 
-puts 'Closing datastore'
-kv.close
+puts 'Stopping engine'
+kv.stop

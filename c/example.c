@@ -11,8 +11,8 @@ void MyCallback(void* context, int kb, const char* k) {
 }
 
 int main() {
-    LOG("Opening datastore");
-    KVEngine* kv = kvengine_open("kvtree3", "/dev/shm/pmemkv", 1073741824);  // 1 GB pool
+    LOG("Starting engine");
+    KVEngine* kv = kvengine_start("kvtree3", "{\"path\":\"/dev/shm/pmemkv\"}");
 
     LOG("Putting new key");
     char* key1 = "key1";
@@ -38,7 +38,7 @@ int main() {
     s = kvengine_remove(kv, strlen(key1), key1);
     assert(s == OK && kvengine_exists(kv, strlen(key1), key1) == NOT_FOUND);
 
-    LOG("Closing datastore");
-    kvengine_close(kv);
+    LOG("Stopping engine");
+    kvengine_stop(kv);
     return 0;
 }

@@ -4,8 +4,8 @@ function assert(condition) {
     if (!condition) throw new Error('Assert failed');
 }
 
-console.log('Opening datastore');
-const kv = new KVEngine('kvtree3', '/dev/shm/pmemkv', 1073741824);  // 1 GB pool
+console.log('Starting engine');
+const kv = new KVEngine('kvtree3', '{"path":"/dev/shm/pmemkv"}');
 
 console.log('Putting new key');
 kv.put('key1', 'value1');
@@ -23,5 +23,5 @@ console.log('Removing existing key');
 kv.remove('key1');
 assert(!kv.exists('key1'));
 
-console.log('Closing datastore');
-kv.close();
+console.log('Stopping engine');
+kv.stop();

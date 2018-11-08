@@ -500,7 +500,7 @@ public:
 
             if (fresh_db) {
                 if (kv_ != NULL) {
-                    pmemkv::KVEngine::Close(kv_);
+                    pmemkv::KVEngine::Stop(kv_);
                     kv_ = NULL;
                 }
                 if (FLAGS_db_size_in_gb > 0) {
@@ -601,9 +601,11 @@ private:
     void Open() {
         assert(kv_ == NULL);
         auto start = g_env->NowMicros();
-        kv_ = pmemkv::KVEngine::Open(FLAGS_engine, FLAGS_db, ((size_t) 1024 * 1024 * 1024 * FLAGS_db_size_in_gb));
+        auto size = to_string(1024 * 1024 * 1024 * FLAGS_db_size_in_gb);
+        kv_ = pmemkv::KVEngine::Start(FLAGS_engine, string("{\"path\":\"") + FLAGS_db + "\",\"size\":" + size + "}");
         if (kv_ == nullptr) {
-            fprintf(stderr, "Cannot open db (%s) with %i GB capacity\n", FLAGS_db, FLAGS_db_size_in_gb);
+            fprintf(stderr, "Cannot start engine (%s) for path (%s) with %i GB capacity\n\n%s",
+                    FLAGS_engine, FLAGS_db, FLAGS_db_size_in_gb, USAGE.c_str());
             exit(-42);
         }
         fprintf(stdout, "%-12s : %11.3f millis/op;\n", "open", ((g_env->NowMicros() - start) * 1e-3));

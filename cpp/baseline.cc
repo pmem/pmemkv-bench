@@ -7,7 +7,6 @@
 
 using namespace pmemkv;
 
-static const long SIZE = 1024 * 1024 * 1024;
 static const int COUNT = 1000000;
 static const string PATH = "/dev/shm/pmemkv";
 
@@ -25,7 +24,7 @@ void test_engine(const string engine, const std::vector<string> keys, const stri
     LOG("\nTesting " << engine << " for " + to_string(keys.size()) << " keys, value size is "
                      << value.length() << "...");
     std::remove(PATH.c_str());
-    KVEngine* kv = KVEngine::Open(engine, PATH, SIZE);
+    KVEngine* kv = KVEngine::Start(engine, "{\"path\":\"" + PATH + "\"}");
 
     LOG("Put (sequential series)");
     auto started = current_seconds();
