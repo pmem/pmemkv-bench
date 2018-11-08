@@ -56,7 +56,7 @@ PMEM_IS_PMEM_FORCE=1 ./pmemkv_bench --db=/dev/shm/pmemkv --db_size_in_gb=1
 Benchmarking on filesystem DAX:
 
 ```
-PMEM_IS_PMEM_FORCE=1 ./pmemkv_bench --db=/mnt/pmem/pmemkv --db_size_in_gb=1
+./pmemkv_bench --db=/mnt/pmem/pmemkv --db_size_in_gb=1
 ```
 
 Benchmarking on device DAX:
@@ -68,7 +68,7 @@ Benchmarking on device DAX:
 Benchmarking with poolset:
 
 ```
-PMEM_IS_PMEM_FORCE=1 ./pmemkv_bench --db=~/pmemkv.poolset
+./pmemkv_bench --db=~/pmemkv.poolset
 ```
 
 <a name="baselines"></a>
