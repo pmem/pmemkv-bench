@@ -1,12 +1,13 @@
 require '../../pmemkv-ruby/lib/pmemkv/kv_engine'
 
-PATH = '/dev/shm/pmemkv'
+PERSIST_PATH = '/dev/shm/pmemkv'
+VOLATILE_PATH = '/dev/shm'
 
-def test_engine(engine, size, value)
+def test_engine(engine, path, size, value)
   puts "\nTesting #{engine} engine: size=#{size}, value.length=#{value.length}"
 
-  File.delete(PATH) if File.exist?(PATH)
-  kv = KVEngine.new(engine, "{\"path\":\"#{PATH}\",\"size\":#{size}}")
+  File.delete(path) if path.equal?(PERSIST_PATH) && File.exist?(path)
+  kv = KVEngine.new(engine, "{\"path\":\"#{path}\",\"size\":#{size}}")
   last_key = 0
   total_chars = 0
   begin
@@ -25,29 +26,61 @@ def test_engine(engine, size, value)
 
 end
 
-test_engine('btree', 64 * 1024 * 1024, '')
-test_engine('btree', 1024 * 1024 * 1024, '')
-test_engine('btree', 64 * 1024 * 1024, 'A' * 16)
-test_engine('btree', 1024 * 1024 * 1024, 'A' * 16)
-test_engine('btree', 64 * 1024 * 1024, 'A' * 64)
-test_engine('btree', 1024 * 1024 * 1024, 'A' * 64)
-test_engine('btree', 64 * 1024 * 1024, 'A' * 128)
-test_engine('btree', 1024 * 1024 * 1024, 'A' * 128)
+test_engine('kvtree3', PERSIST_PATH, 64 * 1024 * 1024, '')
+test_engine('kvtree3', PERSIST_PATH, 1024 * 1024 * 1024, '')
+test_engine('kvtree3', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 16)
+test_engine('kvtree3', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 16)
+test_engine('kvtree3', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 64)
+test_engine('kvtree3', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 64)
+test_engine('kvtree3', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 128)
+test_engine('kvtree3', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 128)
+test_engine('kvtree3', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 256)
+test_engine('kvtree3', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 256)
+test_engine('kvtree3', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 512)
+test_engine('kvtree3', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 512)
+test_engine('kvtree3', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 2048)
+test_engine('kvtree3', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 2048)
+test_engine('kvtree3', PERSIST_PATH, 2 * 1024 * 1024 * 1024, 'A' * 2048)
 
-test_engine('kvtree3', 64 * 1024 * 1024, '')
-test_engine('kvtree3', 1024 * 1024 * 1024, '')
-test_engine('kvtree3', 64 * 1024 * 1024, 'A' * 16)
-test_engine('kvtree3', 1024 * 1024 * 1024, 'A' * 16)
-test_engine('kvtree3', 64 * 1024 * 1024, 'A' * 64)
-test_engine('kvtree3', 1024 * 1024 * 1024, 'A' * 64)
-test_engine('kvtree3', 64 * 1024 * 1024, 'A' * 128)
-test_engine('kvtree3', 1024 * 1024 * 1024, 'A' * 128)
-test_engine('kvtree3', 64 * 1024 * 1024, 'A' * 256)
-test_engine('kvtree3', 1024 * 1024 * 1024, 'A' * 256)
-test_engine('kvtree3', 64 * 1024 * 1024, 'A' * 512)
-test_engine('kvtree3', 1024 * 1024 * 1024, 'A' * 512)
-test_engine('kvtree3', 64 * 1024 * 1024, 'A' * 2048)
-test_engine('kvtree3', 1024 * 1024 * 1024, 'A' * 2048)
-test_engine('kvtree3', 2 * 1024 * 1024 * 1024, 'A' * 2048)
+test_engine('vmap', VOLATILE_PATH, 64 * 1024 * 1024, '')
+test_engine('vmap', VOLATILE_PATH, 1024 * 1024 * 1024, '')
+test_engine('vmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 16)
+test_engine('vmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 16)
+test_engine('vmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 64)
+test_engine('vmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 64)
+test_engine('vmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 128)
+test_engine('vmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 128)
+test_engine('vmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 256)
+test_engine('vmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 256)
+test_engine('vmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 512)
+test_engine('vmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 512)
+test_engine('vmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 2048)
+test_engine('vmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 2048)
+test_engine('vmap', VOLATILE_PATH, 2 * 1024 * 1024 * 1024, 'A' * 2048)
+
+test_engine('vcmap', VOLATILE_PATH, 64 * 1024 * 1024, '')
+test_engine('vcmap', VOLATILE_PATH, 1024 * 1024 * 1024, '')
+test_engine('vcmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 16)
+test_engine('vcmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 16)
+test_engine('vcmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 64)
+test_engine('vcmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 64)
+test_engine('vcmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 128)
+test_engine('vcmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 128)
+test_engine('vcmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 256)
+test_engine('vcmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 256)
+test_engine('vcmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 512)
+test_engine('vcmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 512)
+test_engine('vcmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 2048)
+test_engine('vcmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 2048)
+test_engine('vcmap', VOLATILE_PATH, 2 * 1024 * 1024 * 1024, 'A' * 2048)
+
+test_engine('btree', PERSIST_PATH, 64 * 1024 * 1024, '')
+test_engine('btree', PERSIST_PATH, 1024 * 1024 * 1024, '')
+test_engine('btree', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 16)
+test_engine('btree', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 16)
+test_engine('btree', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 64)
+test_engine('btree', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 64)
+test_engine('btree', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 128)
+test_engine('btree', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 128)
 
 puts "\nFinished!\n\n"
