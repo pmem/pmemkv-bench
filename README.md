@@ -6,6 +6,17 @@ production systems. APIs and file formats may change at any time without
 preserving backwards compatibility. All known issues and limitations
 are logged as GitHub issues.*
 
+<a name="LD_LIBRARY_PATH"></a>
+
+LD_LIBRARY_PATH
+---------------
+
+When running on Fedora, force the library path like this:
+
+```
+export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
+```
+
 <a name="benchmarking"></a>
 
 Benchmarking
