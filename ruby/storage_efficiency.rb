@@ -74,13 +74,4 @@ test_engine('vcmap', VOLATILE_PATH, 64 * 1024 * 1024, 'A' * 2048)
 test_engine('vcmap', VOLATILE_PATH, 1024 * 1024 * 1024, 'A' * 2048)
 test_engine('vcmap', VOLATILE_PATH, 2 * 1024 * 1024 * 1024, 'A' * 2048)
 
-test_engine('btree', PERSIST_PATH, 64 * 1024 * 1024, '')
-test_engine('btree', PERSIST_PATH, 1024 * 1024 * 1024, '')
-test_engine('btree', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 16)
-test_engine('btree', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 16)
-test_engine('btree', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 64)
-test_engine('btree', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 64)
-test_engine('btree', PERSIST_PATH, 64 * 1024 * 1024, 'A' * 128)
-test_engine('btree', PERSIST_PATH, 1024 * 1024 * 1024, 'A' * 128)
-
 puts "\nFinished!\n\n"

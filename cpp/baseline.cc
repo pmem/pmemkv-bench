@@ -81,7 +81,6 @@ int main() {
 
     // test all engines for all keys & values
     test_engine("blackhole", keys, "AAAAAAAAAAAAAAAA");
-    test_engine("btree", keys, "AAAAAAAAAAAAAAAA");
     test_engine("kvtree3", keys, "AAAAAAAAAAAAAAAA");
     test_engine("kvtree3", keys, std::string(200, 'A'));
     test_engine("kvtree3", keys, std::string(800, 'A'));

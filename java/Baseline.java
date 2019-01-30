@@ -62,7 +62,6 @@ public class Baseline {
 
         // test all engines for all keys & values
         test_engine("blackhole", keys, "AAAAAAAAAAAAAAAA".getBytes());
-        test_engine("btree", keys, "AAAAAAAAAAAAAAAA".getBytes());
         test_engine("kvtree3", keys, "AAAAAAAAAAAAAAAA".getBytes());
         test_engine("kvtree3", keys, (new String(new char[200]).replace("\0", "A")).getBytes());
         test_engine("kvtree3", keys, (new String(new char[800]).replace("\0", "A")).getBytes());
