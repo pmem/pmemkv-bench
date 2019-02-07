@@ -21,7 +21,7 @@ int main() {
     LOG("Iterating existing keys");
     kv->Put("key2", "value2");
     kv->Put("key3", "value3");
-    kv->All([](int kb, const char* k) {
+    kv->All([](const string& k) {
         LOG("  visited: " << k);
     });
 
