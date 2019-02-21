@@ -7,7 +7,7 @@ using namespace pmemkv;
 
 int main() {
     LOG("Starting engine");
-    KVEngine* kv = KVEngine::Start("kvtree3", "{\"path\":\"/dev/shm/pmemkv\"}");
+    KVEngine* kv = KVEngine::Start("vmap", "{\"path\":\"/dev/shm/\"}");
 
     LOG("Putting new key");
     KVStatus s = kv->Put("key1", "value1");
