@@ -5,7 +5,7 @@ def assert(condition)
 end
 
 puts 'Starting engine'
-kv = KVEngine.new('vmap', '{"path":"/dev/shm/"}')
+kv = KVEngine.new('vsmap', '{"path":"/dev/shm/"}')
 
 puts 'Putting new key'
 kv.put('key1', 'value1')

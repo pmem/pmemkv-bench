@@ -18,7 +18,7 @@ void AllCallback(void* context, int kb, const char* k) {
 
 int main() {
     LOG("Starting engine");
-    KVEngine* kv = kvengine_start(NULL, "kvtree3", "{\"path\":\"/dev/shm/pmemkv\"}", &StartFailureCallback);
+    KVEngine* kv = kvengine_start(NULL, "vsmap", "{\"path\":\"/dev/shm\"}", &StartFailureCallback);
 
     LOG("Putting new key");
     char* key1 = "key1";

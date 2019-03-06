@@ -5,7 +5,7 @@ function assert(condition) {
 }
 
 console.log('Starting engine');
-const kv = new KVEngine('vmap', '{"path":"/dev/shm/"}');
+const kv = new KVEngine('vsmap', '{"path":"/dev/shm/"}');
 
 console.log('Putting new key');
 kv.put('key1', 'value1');
