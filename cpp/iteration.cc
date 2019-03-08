@@ -58,7 +58,7 @@ void test_engine(const string engine, const string value) {
 }
 
 int main() {
-    test_engine("kvtree3", std::string(64, 'A'));
+    test_engine("tree3", std::string(64, 'A'));
     LOG("\nFinished!\n");
     return 0;
 }

@@ -48,8 +48,8 @@ end
 
 # test all engines for all keys & values
 test_engine('blackhole', 'AAAAAAAAAAAAAAAA')
-test_engine('kvtree3', 'AAAAAAAAAAAAAAAA')
-test_engine('kvtree3', 'A' * 200)
-test_engine('kvtree3', 'A' * 800)
+test_engine('tree3', 'AAAAAAAAAAAAAAAA')
+test_engine('tree3', 'A' * 200)
+test_engine('tree3', 'A' * 800)
 
 puts "\nFinished!\n\n"

@@ -66,7 +66,7 @@ public class Iteration {
     }
 
     public static void main(String[] args) {
-        test_engine("kvtree3", (new String(new char[64]).replace("\0", "A")).getBytes());
+        test_engine("tree3", (new String(new char[64]).replace("\0", "A")).getBytes());
         System.out.printf("%nFinished!%n%n");
     }
 
