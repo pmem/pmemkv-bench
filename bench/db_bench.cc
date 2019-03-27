@@ -601,7 +601,7 @@ private:
     void Open() {
         assert(kv_ == NULL);
         auto start = g_env->NowMicros();
-        auto size = to_string(1024 * 1024 * 1024 * FLAGS_db_size_in_gb);
+        auto size = to_string(1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb);
         kv_ = pmemkv::KVEngine::Start(FLAGS_engine, string("{\"path\":\"") + FLAGS_db + "\",\"size\":" + size + "}");
         if (kv_ == nullptr) {
             fprintf(stderr, "Cannot start engine (%s) for path (%s) with %i GB capacity\n\n%s",
