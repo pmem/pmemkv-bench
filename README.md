@@ -91,6 +91,11 @@ Baseline tests are simple single-threaded tests that compare average per-operati
 latency between different language bindings and the `blackhole` engine. These are
 used to analyze and improve performance of our language bindings.
 
+Some of **baselines**, **examples** and other **programs**/**scripts** may use `tree3` engine,
+which is not enabled in pmemkv by default. You have to enable it using CMake option:
+`cmake .. -DENGINE_TREE3=ON`.
+For more details see [pmemkv/INSTALLING.md](https://github.com/pmem/pmemkv/blob/master/INSTALLING.md).
+
 ```
 make baseline_c
 make baseline_cpp
