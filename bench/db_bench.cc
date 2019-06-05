@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <chrono>
 
 #include "leveldb/env.h"
@@ -24,7 +25,7 @@
 #include "random.h"
 #include "libpmemkv.h"
 
-static const string USAGE =
+static const std::string USAGE =
         "pmemkv_bench\n"
         "--engine=<name>            (storage engine name, default: tree3)\n"
         "--db=<location>            (path to persistent pool, default: /dev/shm/pmemkv)\n"
@@ -601,8 +602,8 @@ private:
     void Open() {
         assert(kv_ == NULL);
         auto start = g_env->NowMicros();
-        auto size = to_string(1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb);
-        kv_ = pmemkv::KVEngine::Start(FLAGS_engine, string("{\"path\":\"") + FLAGS_db + "\",\"size\":" + size + "}");
+        auto size = std::to_string(1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb);
+        kv_ = pmemkv::KVEngine::Start(FLAGS_engine, std::string("{\"path\":\"") + FLAGS_db + "\",\"size\":" + size + "}");
         if (kv_ == nullptr) {
             fprintf(stderr, "Cannot start engine (%s) for path (%s) with %i GB capacity\n\n%s",
                     FLAGS_engine, FLAGS_db, FLAGS_db_size_in_gb, USAGE.c_str());
@@ -624,7 +625,7 @@ private:
             const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
             char key[100];
             snprintf(key, sizeof(key), "%016d", k);
-            string value = string();
+            std::string value = std::string();
             value.append(value_size_, 'X');
             s = kv_->Put(key, value);
             bytes += value_size_ + strlen(key);
@@ -653,7 +654,7 @@ private:
             const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
             char key[100];
             snprintf(key, sizeof(key), missing ? "%016d!" : "%016d", k);
-            string value;
+            std::string value;
             if (kv_->Get(key, &value) == OK) found++;
             thread->stats.FinishedSingleOp();
             bytes += value.length() + strlen(key);
