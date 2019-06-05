@@ -27,11 +27,12 @@
 
 static const std::string USAGE =
         "pmemkv_bench\n"
-        "--engine=<name>            (storage engine name, default: tree3)\n"
+        "--engine=<name>            (storage engine name, default: cmap)\n"
         "--db=<location>            (path to persistent pool, default: /dev/shm/pmemkv)\n"
         "                           (note: file on DAX filesystem, DAX device, or poolset file)\n"
         "--db_size_in_gb=<integer>  (size of persistent pool to create in GB, default: 0)\n"
-        "                           (note: always use 0 with poolset or device DAX configs)\n"
+        "                           (note: always use 0 with existing poolset or device DAX configs)\n"
+        "                           (note: when pool path is non-existing, value should be > 0)\n"
         "--histogram=<0|1>          (show histograms when reporting latencies)\n"
         "--num=<integer>            (number of keys to place in database, default: 1000000)\n"
         "--reads=<integer>          (number of read operations, default: 1000000)\n"
@@ -54,7 +55,7 @@ static const char *FLAGS_benchmarks =
         "fillrandom,overwrite,fillseq,readrandom,readseq,readrandom,readmissing,readrandom,deleteseq";
 
 // Default engine name
-static const char *FLAGS_engine = "tree3";
+static const char *FLAGS_engine = "cmap";
 
 // Number of key/values to place in database
 static int FLAGS_num = 1000000;
