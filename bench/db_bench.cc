@@ -75,7 +75,7 @@ static int FLAGS_value_size = 100;
 static bool FLAGS_histogram = false;
 
 // Use the db with the following name.
-static const char *FLAGS_db = NULL;
+static const char *FLAGS_db = "/dev/shm/pmemkv";
 
 // Use following size when opening the database.
 static int FLAGS_db_size_in_gb = 0;
@@ -837,11 +837,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Invalid flag '%s'\n", argv[i]);
             exit(1);
         }
-    }
-
-    // Choose a location for the test database if none given with --db=<path>
-    if (FLAGS_db == NULL) {
-        FLAGS_db = "/dev/shm/pmemkv";
     }
 
     // Run benchmark against default environment
