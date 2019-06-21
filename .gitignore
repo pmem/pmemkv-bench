@@ -1,8 +1,8 @@
+.*
+!.gitignore
+!.gitattributes
 *.bin
 *.class
 *.d
-.DS_Store
-.idea/
-cmake-build-debug/
-googletest-*.zip
 pmemkv_bench
+/build/
