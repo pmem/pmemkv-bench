@@ -1,35 +1,60 @@
 #include <iostream>
-#include "libpmemkv.h"
+#include <assert.h>
+
+#include "libpmemkv.hpp"
 
 #define LOG(msg) std::cout << msg << "\n"
 
-using namespace pmemkv;
+using namespace pmem::kv;
 
-int main() {
-    LOG("Starting engine");
-    KVEngine* kv = KVEngine::Start("vsmap", "{\"path\":\"/dev/shm/\"}");
+int main()
+{
+	LOG("Starting engine");
+	const std::string PATH = "/dev/shm/";
+	const size_t size = 1024ULL * 1024ULL * 1024ULL * 1;
+	int ret = 0;
+	size_t cnt = 0;
 
-    LOG("Putting new key");
-    KVStatus s = kv->Put("key1", "value1");
-    assert(s == OK && kv->Count() == 1);
+	pmemkv_config *cfg = pmemkv_config_new();
 
-    LOG("Reading key back");
-    string value;
-    s = kv->Get("key1", &value);
-    assert(s == OK && value == "value1");
+	if (cfg == nullptr)
+		throw std::runtime_error("creating config failed");
 
-    LOG("Iterating existing keys");
-    kv->Put("key2", "value2");
-    kv->Put("key3", "value3");
-    kv->All([](const string& k) {
-        LOG("  visited: " << k);
-    });
+	auto cfg_s = pmemkv_config_put(cfg, "path", PATH.c_str(), PATH.size() + 1);
+	if (cfg_s != PMEMKV_STATUS_OK)
+		throw std::runtime_error("putting 'path' to config failed");
 
-    LOG("Removing existing key");
-    s = kv->Remove("key1");
-    assert(s == OK && !kv->Exists("key1"));
+	cfg_s = pmemkv_config_put(cfg, "size", &size, sizeof(size));
+	if (cfg_s != PMEMKV_STATUS_OK)
+		throw std::runtime_error("putting 'size' to config failed");
 
-    LOG("Stopping engine");
-    delete kv;
-    return 0;
+	db *kv = new db;
+	status s = kv->open("vsmap", cfg);
+	if (s != status::OK)
+		throw std::runtime_error("open failed");
+
+	pmemkv_config_delete(cfg);
+
+	LOG("Putting new key");
+	s = kv->put("key1", "value1");
+	assert(s == status::OK && kv->count(cnt) == status::OK);
+	assert(cnt == 1);
+
+	LOG("Reading key back");
+	std::string value;
+	s = kv->get("key1", &value);
+	assert(s == status::OK && value == "value1");
+
+	LOG("Iterating existing keys");
+	kv->put("key2", "value2");
+	kv->put("key3", "value3");
+	kv->all([](string_view k) { LOG("  visited: " << k.data()); });
+
+	LOG("Removing existing key");
+	s = kv->remove("key1");
+	assert(s == status::OK && kv->exists("key1") == status::NOT_FOUND);
+
+	LOG("Stopping engine");
+	delete kv;
+	return 0;
 }
