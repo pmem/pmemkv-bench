@@ -513,7 +513,7 @@ public:
             }
 
             if (kv_ == NULL) {
-                Open();
+                Open(fresh_db);
             }
 
             if (method != NULL) {
@@ -600,7 +600,7 @@ private:
         delete[] arg;
     }
 
-    void Open() {
+    void Open(bool fresh_db) {
         assert(kv_ == NULL);
         auto start = g_env->NowMicros();
         auto size = 1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb;
@@ -610,11 +610,19 @@ private:
         if (cfg == nullptr)
             throw std::runtime_error("creating config failed");
 
-        ret += pmemkv_config_put(cfg, "path", FLAGS_db, strlen(FLAGS_db) + 1);
-        ret += pmemkv_config_put(cfg, "size", &size, sizeof(size));
+        ret = pmemkv_config_put_string(cfg, "path", FLAGS_db);
+        if(ret != 0)
+            throw std::runtime_error("putting 'path' to config failed");
 
-        if (ret != 0)
-            throw std::runtime_error("putting value to config failed");
+        if(fresh_db) {
+            ret = pmemkv_config_put_uint64(cfg, "force_create", 1);
+            if (ret != 0)
+                throw std::runtime_error("putting 'force_create' to config failed");
+
+            ret = pmemkv_config_put_uint64(cfg, "size", size);
+            if (ret != 0)
+                throw std::runtime_error("putting size to config failed");
+        }
 
         kv_ = new pmem::kv::db;
         auto s = kv_->open(FLAGS_engine, cfg);
