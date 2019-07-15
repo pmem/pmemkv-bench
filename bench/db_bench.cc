@@ -37,6 +37,7 @@ static const std::string USAGE =
         "--num=<integer>            (number of keys to place in database, default: 1000000)\n"
         "--reads=<integer>          (number of read operations, default: 1000000)\n"
         "--threads=<integer>        (number of concurrent threads, default: 1)\n"
+        "--key_size=<integer>         (size of keys in bytes, default: 16)\n"
         "--value_size=<integer>     (size of values in bytes, default: 100)\n"
         "--benchmarks=<name>,       (comma-separated list of benchmarks to run)\n"
         "    fillseq                (load N values in sequential key order)\n"
@@ -466,6 +467,7 @@ public:
             num_ = FLAGS_num;
             reads_ = (FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads);
             value_size_ = FLAGS_value_size;
+            key_size_ = FLAGS_key_size;
 
             void (Benchmark::*method)(ThreadState *) = NULL;
             bool fresh_db = false;
@@ -850,6 +852,8 @@ int main(int argc, char **argv) {
             FLAGS_reads = n;
         } else if (sscanf(argv[i], "--threads=%d%c", &n, &junk) == 1) {
             FLAGS_threads = n;
+        } else if (sscanf(argv[i], "--key_size=%d%c", &n, &junk) == 1) {
+            FLAGS_key_size = n;
         } else if (sscanf(argv[i], "--value_size=%d%c", &n, &junk) == 1) {
             FLAGS_value_size = n;
         } else if (strncmp(argv[i], "--db=", 5) == 0) {
