@@ -38,6 +38,10 @@ static const std::string USAGE =
         "--reads=<integer>          (number of read operations, default: 1000000)\n"
         "--threads=<integer>        (number of concurrent threads, default: 1)\n"
         "--value_size=<integer>     (size of values in bytes, default: 100)\n"
+        "--readwritepercent=<integer> (Ratio of reads to reads/writes (expressed "
+        "as percentage) for the ReadRandomWriteRandom workload. The default value "
+        "90 means 90% operations out of all reads and writes operations are reads. "
+        "In other words, 9 gets for every 1 put.) type: int32 default: 90\n"
         "--benchmarks=<name>,       (comma-separated list of benchmarks to run)\n"
         "    fillseq                (load N values in sequential key order)\n"
         "    fillrandom             (load N values in random key order)\n"
@@ -86,7 +90,7 @@ static const int FLAGS_ops_between_duration_checks = 1000;
 
 static const int FLAGS_duration = 0;
 
-static const int FLAGS_readwritepercent = 90;
+static int FLAGS_readwritepercent = 90;
 
 using namespace leveldb;
 
@@ -443,8 +447,15 @@ public:
     }
 
     void GenerateKeyFromInt(uint64_t v, int64_t num_keys, Slice* key) {
-        char* str = const_cast<char*>(key->data());
-        snprintf(str, key->size(), "%016lu", v);
+        char *start = const_cast<char *>(key->data());
+        char *pos = start;
+
+        int bytes_to_fill = std::min(key_size_ - static_cast<int>(pos - start), 8);
+        memcpy(pos, static_cast<void *>(&v), bytes_to_fill);
+        pos += bytes_to_fill;
+        if (key_size_ > pos - start) {
+            memset(pos, '0', key_size_ - (pos - start));
+        }
     }
 
     void Run() {
@@ -642,17 +653,18 @@ private:
             snprintf(msg, sizeof(msg), "(%d ops)", num_);
             thread->stats.AddMessage(msg);
         }
+        std::unique_ptr<const char[]> key_guard;
+        Slice key = AllocateKey(key_guard);
 
         pmem::kv::status s;
         int64_t bytes = 0;
         for (int i = 0; i < num_; i++) {
             const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
-            char key[100];
-            snprintf(key, sizeof(key), "%016d", k);
+            GenerateKeyFromInt(k, FLAGS_num, &key);
             std::string value = std::string();
             value.append(value_size_, 'X');
-            s = kv_->put(key, value);
-            bytes += value_size_ + strlen(key);
+            s = kv_->put(key.ToString(), value);
+            bytes += value_size_ + key.size();
             thread->stats.FinishedSingleOp();
             if (s != pmem::kv::status::OK) {
                 fprintf(stdout, "Out of space at key %i\n", i);
@@ -674,14 +686,15 @@ private:
         pmem::kv::status s;
         int64_t bytes = 0;
         int found = 0;
+        std::unique_ptr<const char[]> key_guard;
+        Slice key = AllocateKey(key_guard);
         for (int i = 0; i < reads_; i++) {
             const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
-            char key[100];
-            snprintf(key, sizeof(key), missing ? "%016d!" : "%016d", k);
+            GenerateKeyFromInt(k, FLAGS_num, &key);
             std::string value;
-            if (kv_->get(key, &value) == pmem::kv::status::OK) found++;
+            if (kv_->get(key.ToString(), &value) == pmem::kv::status::OK) found++;
             thread->stats.FinishedSingleOp();
-            bytes += value.length() + strlen(key);
+            bytes += value.length() + key.size();
         }
         thread->stats.AddBytes(bytes);
         char msg[100];
@@ -702,11 +715,12 @@ private:
     }
 
     void DoDelete(ThreadState *thread, bool seq) {
+        std::unique_ptr<const char[]> key_guard;
+        Slice key = AllocateKey(key_guard);
         for (int i = 0; i < num_; i++) {
             const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
-            char key[100];
-            snprintf(key, sizeof(key), "%016d", k);
-            kv_->remove(key);
+            GenerateKeyFromInt(k, FLAGS_num, &key);
+            kv_->remove(key.ToString());
             thread->stats.FinishedSingleOp();
         }
     }
@@ -778,6 +792,7 @@ private:
         int put_weight = 0;
         int64_t reads_done = 0;
         int64_t writes_done = 0;
+        int64_t bytes = 0;
         Duration duration(FLAGS_duration, readwrites_);
 
         std::unique_ptr<const char[]> key_guard;
@@ -792,13 +807,15 @@ private:
                 put_weight = 100 - get_weight;
             }
             if (get_weight > 0) {
+                value.clear();
                 pmem::kv::status s = kv_->get(key.ToString(), &value);
-                if (s == pmem::kv::status::NOT_FOUND) {
+                if (s == pmem::kv::status::OK) {
                     found++;
-                } else if (s != pmem::kv::status::OK) {
+                } else if (s != pmem::kv::status::NOT_FOUND) {
                     fprintf(stderr, "get error\n");
                 }
 
+                bytes += value.length() + key.size();
                 get_weight--;
                 reads_done++;
                 thread->stats.FinishedSingleOp();
@@ -810,11 +827,13 @@ private:
                     fprintf(stderr, "put error\n");
                     exit(1);
                 }
+                bytes += key.size() + value_size_;
                 put_weight--;
                 writes_done++;
                 thread->stats.FinishedSingleOp();
             }
         }
+        thread->stats.AddBytes(bytes);
         char msg[100];
         snprintf(msg, sizeof(msg), "( reads:%" PRIu64 " writes:%" PRIu64 \
                 " total:%" PRIu64 " found:%" PRIu64 ")",
@@ -852,6 +871,8 @@ int main(int argc, char **argv) {
             FLAGS_threads = n;
         } else if (sscanf(argv[i], "--value_size=%d%c", &n, &junk) == 1) {
             FLAGS_value_size = n;
+        } else if (sscanf(argv[i], "--readwritepercent=%d%c", &n, &junk) == 1) {
+            FLAGS_readwritepercent = n;
         } else if (strncmp(argv[i], "--db=", 5) == 0) {
             FLAGS_db = argv[i] + 5;
         } else if (sscanf(argv[i], "--db_size_in_gb=%d%c", &n, &junk) == 1) {
