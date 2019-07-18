@@ -50,22 +50,6 @@ example_cpp: reset
 	PMEM_IS_PMEM_FORCE=1 ./example.bin
 	cd .. && $(MAKE) reset
 
-example_java: reset
-	cd java
-	javac -cp ../../pmemkv-java/target/*.jar Example.java
-	PMEM_IS_PMEM_FORCE=1 java -ea -Xms1G -cp .:`find ../../pmemkv-java/target -name *.jar` -Djava.library.path=/usr/local/lib Example
-	cd .. && $(MAKE) reset
-
-example_nodejs: reset
-	cd nodejs
-	PMEM_IS_PMEM_FORCE=1 node example.js
-	cd .. && $(MAKE) reset
-
-example_ruby: reset
-	cd ruby
-	PMEM_IS_PMEM_FORCE=1 ruby example.rb
-	cd .. && $(MAKE) reset
-
 iteration_cpp: reset
 	cd cpp
 	g++ iteration.cc -o iteration.bin -O2 -std=c++11 -lpmemkv

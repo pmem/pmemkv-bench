@@ -114,9 +114,6 @@ These are small example programs used in our documentation.
 ```
 make example_c
 make example_cpp
-make example_java
-make example_nodejs
-make example_ruby
 ```
 
 Iteration
