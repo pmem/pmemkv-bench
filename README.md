@@ -109,15 +109,12 @@ make baseline_ruby
 Examples
 --------
 
-These are small example programs used in our documentation.
-
-```
-make example_c
-make example_cpp
-make example_java
-make example_nodejs
-make example_ruby
-```
+Examples are in individual repos:
+<ul>
+<li><a href="https://github.com/pmem/pmemkv-java/tree/master/examples">pmemkv-java/examples</a></li>
+<li><a href="https://github.com/pmem/pmemkv-nodejs/tree/master/examples">pmemkv-nodejs/examples</a></li>
+<li><a href="https://github.com/pmem/pmemkv-ruby/tree/master/examples">pmemkv-ruby/examples</a></li>
+</ul>
 
 Iteration
 ---------
