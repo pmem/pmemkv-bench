@@ -110,16 +110,13 @@ make baseline_python
 Examples
 --------
 
-These are small example programs used in our documentation.
+Examples are in individual repos:
+* [pmemkv/examples](https://github.com/pmem/pmemkv/tree/master/examples)
+* [pmemkv-java/examples](https://github.com/pmem/pmemkv-java/tree/master/examples)
+* [pmemkv-nodejs/examples](https://github.com/pmem/pmemkv-nodejs/tree/master/examples)
+* [pmemkv-ruby/examples](https://github.com/pmem/pmemkv-ruby/tree/master/examples)
+* [pmemkv-python/examples](https://github.com/pmem/pmemkv-python/tree/master/examples)
 
-```
-make example_c
-make example_cpp
-make example_java
-make example_nodejs
-make example_ruby
-make example_python
-```
 
 Iteration
 ---------
