@@ -38,6 +38,11 @@ baseline_ruby: reset
 	PMEM_IS_PMEM_FORCE=1 ruby baseline.rb
 	cd .. && $(MAKE) reset
 
+baseline_python: reset
+	cd python
+	PMEM_IS_PMEM_FORCE=1 python3 baseline.py
+	cd .. && $(MAKE) reset
+
 example_c: reset
 	cd c
 	gcc example.c -o example.bin -lpmemkv
@@ -66,6 +71,11 @@ example_ruby: reset
 	PMEM_IS_PMEM_FORCE=1 ruby example.rb
 	cd .. && $(MAKE) reset
 
+example_python: reset
+	cd python
+	PMEM_IS_PMEM_FORCE=1 python3 example.py
+	cd .. && $(MAKE) reset
+
 iteration_cpp: reset
 	cd cpp
 	g++ iteration.cc -o iteration.bin -O2 -std=c++11 -lpmemkv
@@ -76,6 +86,11 @@ iteration_java: reset
 	cd java
 	javac -cp ../../pmemkv-java/target/*.jar Iteration.java
 	PMEM_IS_PMEM_FORCE=1 java -Xms1G -cp .:`find ../../pmemkv-java/target -name *.jar` -Djava.library.path=/usr/local/lib Iteration
+	cd .. && $(MAKE) reset
+
+iteration_python: reset
+	cd python
+	PMEM_IS_PMEM_FORCE=1 python3 iteration.py
 	cd .. && $(MAKE) reset
 
 storage_efficiency: reset
