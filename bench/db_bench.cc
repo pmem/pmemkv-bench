@@ -613,41 +613,41 @@ private:
         delete[] arg;
     }
 
-    void Open(bool fresh_db) {
-        assert(kv_ == NULL);
-        auto start = g_env->NowMicros();
-        auto size = 1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb;
-        pmemkv_config *cfg = pmemkv_config_new();
-        int ret = 0;
+	void Open(bool fresh_db) {
+		assert(kv_ == NULL);
+		auto start = g_env->NowMicros();
+		auto size = 1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb;
+		pmem::kv::config cfg;
 
-        if (cfg == nullptr)
-            throw std::runtime_error("creating config failed");
+		auto cfg_s = cfg.put_string("path", FLAGS_db);
 
-        ret = pmemkv_config_put_string(cfg, "path", FLAGS_db);
-        if(ret != 0)
-            throw std::runtime_error("putting 'path' to config failed");
+		if (cfg_s != pmem::kv::status::OK)
+			throw std::runtime_error("putting 'path' to config failed");
 
-        if(fresh_db) {
-            ret = pmemkv_config_put_uint64(cfg, "force_create", 1);
-            if (ret != 0)
-                throw std::runtime_error("putting 'force_create' to config failed");
+		if (fresh_db) {
+			cfg_s = cfg.put_uint64("force_create", 1);
+			if (cfg_s != pmem::kv::status::OK)
+				throw std::runtime_error(
+					"putting 'force_create' to config failed");
 
-            ret = pmemkv_config_put_uint64(cfg, "size", size);
-            if (ret != 0)
-                throw std::runtime_error("putting size to config failed");
-        }
+			cfg_s = cfg.put_uint64("size", size);
 
-        kv_ = new pmem::kv::db;
-        auto s = kv_->open(FLAGS_engine, cfg);
+			if (cfg_s != pmem::kv::status::OK)
+				throw std::runtime_error(
+					"putting 'size' to config failed");
+		}
 
-        if (s !=  pmem::kv::status::OK) {
-            fprintf(stderr, "Cannot start engine (%s) for path (%s) with %i GB capacity\n\n%s",
-                    FLAGS_engine, FLAGS_db, FLAGS_db_size_in_gb, USAGE.c_str());
-            exit(-42);
-        }
+		kv_ = new pmem::kv::db;
+		auto s = kv_->open(FLAGS_engine, std::move(cfg));
 
-        fprintf(stdout, "%-12s : %11.3f millis/op;\n", "open", ((g_env->NowMicros() - start) * 1e-3));
-    }
+		if (s !=  pmem::kv::status::OK) {
+			fprintf(stderr, "Cannot start engine (%s) for path (%s) with %i GB capacity\n\n%s",
+					FLAGS_engine, FLAGS_db, FLAGS_db_size_in_gb, USAGE.c_str());
+			exit(-42);
+		}
+
+		fprintf(stdout, "%-12s : %11.3f millis/op;\n", "open", ((g_env->NowMicros() - start) * 1e-3));
+	}
 
     void DoWrite(ThreadState *thread, bool seq) {
         if (num_ != FLAGS_num) {
