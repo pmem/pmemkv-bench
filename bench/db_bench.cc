@@ -624,7 +624,7 @@ private:
 		if (cfg_s != pmem::kv::status::OK)
 			throw std::runtime_error("putting 'path' to config failed");
 
-		if (fresh_db) {
+		if (fresh_db && FLAGS_db_size_in_gb > 0) {
 			cfg_s = cfg.put_uint64("force_create", 1);
 			if (cfg_s != pmem::kv::status::OK)
 				throw std::runtime_error(
