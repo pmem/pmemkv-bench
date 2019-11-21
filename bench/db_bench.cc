@@ -57,7 +57,7 @@ static const std::string USAGE =
 
 // Default list of comma-separated operations to run
 static const char *FLAGS_benchmarks =
-        "fillrandom,overwrite,fillseq,readrandom,readseq,readrandom,readmissing,readrandom,deleteseq";
+        "fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
 
 // Default engine name
 static const char *FLAGS_engine = "cmap";
