@@ -263,11 +263,11 @@ public:
         // that does not call FinishedSingleOp().
         if (done_ < 1) done_ = 1;
 
+        // Rate and ops/sec is computed on actual elapsed time, not the sum of per-thread
+        // elapsed times.
+        double elapsed = (finish_ - start_) * 1e-6;
         std::string extra;
         if (bytes_ > 0) {
-            // Rate is computed on actual elapsed time, not the sum of per-thread
-            // elapsed times.
-            double elapsed = (finish_ - start_) * 1e-6;
             char rate[100];
             snprintf(rate, sizeof(rate), "%6.1f MB/s",
                      (bytes_ / 1048576.0) / elapsed);
@@ -278,7 +278,7 @@ public:
         fprintf(stdout, "%-12s : %11.3f micros/op %.0f ops/sec;%s%s\n",
                 name.ToString().c_str(),
                 seconds_ * 1e6 / done_,
-                done_ / seconds_,
+                done_ / elapsed,
                 (extra.empty() ? "" : " "),
                 extra.c_str());
         if (FLAGS_histogram) {
