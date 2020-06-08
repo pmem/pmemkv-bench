@@ -451,8 +451,16 @@ public:
         char *start = const_cast<char *>(key->data());
         char *pos = start;
 
+<<<<<<< HEAD
+<<<<<<< HEAD
         int bytes_to_fill = std::min(key_size_ - static_cast<int>(pos - start), 8);
         
+=======
+        int bytes_to_fill = std::min(key_size_ - static_cast<int>(pos - start), 8);        
+>>>>>>> 7925025... readmissing fix
+=======
+        int bytes_to_fill = std::min(key_size_ - static_cast<int>(pos - start), 8);        
+>>>>>>> 75de700... formatting
         if(missing){
             int64_t v1=-v;
             memcpy(pos, static_cast<void *>(&v1), bytes_to_fill);
@@ -464,9 +472,17 @@ public:
             memset(pos, '0', key_size_ - (pos - start));
         }
     }
+<<<<<<< HEAD
+<<<<<<< HEAD
 
 
 
+=======
+    
+>>>>>>> 7925025... readmissing fix
+=======
+    
+>>>>>>> 75de700... formatting
     void Run() {
         PrintHeader();
 
