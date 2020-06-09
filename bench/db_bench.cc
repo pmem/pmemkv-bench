@@ -447,12 +447,16 @@ public:
         return Slice(key_guard.get(), key_size_);
     }
 
-    void GenerateKeyFromInt(uint64_t v, int64_t num_keys, Slice* key) {
+    void GenerateKeyFromInt(uint64_t v, int64_t num_keys, Slice* key, bool missing = false) {
         char *start = const_cast<char *>(key->data());
         char *pos = start;
-
         int bytes_to_fill = std::min(key_size_ - static_cast<int>(pos - start), 8);
-        memcpy(pos, static_cast<void *>(&v), bytes_to_fill);
+        if(missing){
+            int64_t v1=-v;
+            memcpy(pos, static_cast<void *>(&v1), bytes_to_fill);
+        }
+        else
+            memcpy(pos, static_cast<void *>(&v), bytes_to_fill);
         pos += bytes_to_fill;
         if (key_size_ > pos - start) {
             memset(pos, '0', key_size_ - (pos - start));
@@ -694,7 +698,7 @@ private:
         Slice key = AllocateKey(key_guard);
         for (int i = 0; i < reads_; i++) {
             const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
-            GenerateKeyFromInt(k, FLAGS_num, &key);
+            GenerateKeyFromInt(k, FLAGS_num, &key, missing);
             std::string value;
             if (kv_->get(key.ToString(), &value) == pmem::kv::status::OK) found++;
             thread->stats.FinishedSingleOp();
