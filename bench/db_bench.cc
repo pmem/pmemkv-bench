@@ -43,6 +43,8 @@ static const std::string USAGE =
         "as percentage) for the ReadRandomWriteRandom workload. The default value "
         "90 means 90% operations out of all reads and writes operations are reads. "
         "In other words, 9 gets for every 1 put.) type: int32 default: 90\n"
+        "--tx_size=<integer>        (number of elements to insert in a single tx, there will be"
+        "num/tx_size transactions per thread in total, the last tx might be smaller)\n"
         "--benchmarks=<name>,       (comma-separated list of benchmarks to run)\n"
         "    fillseq                (load N values in sequential key order)\n"
         "    fillrandom             (load N values in random key order)\n"
@@ -53,11 +55,12 @@ static const std::string USAGE =
         "    deleteseq              (delete N values in sequential key order)\n"
         "    deleterandom           (delete N values in random key order)\n"
         "    readwhilewriting       (1 writer, N threads doing random reads)\n"
-        "    readrandomwriterandom  (N threads doing random-read, random-write)\n";
+        "    readrandomwriterandom  (N threads doing random-read, random-write)\n"
+        "    txfillrandom           (load N values in random key order transactionally \n";
 
 // Default list of comma-separated operations to run
 static const char *FLAGS_benchmarks =
-        "fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
+        "fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom, txfillrandom";
 
 // Default engine name
 static const char *FLAGS_engine = "cmap";
@@ -92,6 +95,8 @@ static const int FLAGS_ops_between_duration_checks = 1000;
 static const int FLAGS_duration = 0;
 
 static int FLAGS_readwritepercent = 90;
+
+static int FLAGS_tx_size = 10;
 
 using namespace leveldb;
 
@@ -367,6 +372,7 @@ private:
     int key_size_;
     int reads_;
     int64_t readwrites_;
+    int tx_size;
 
     void PrintHeader() {
         PrintEnvironment();
@@ -434,7 +440,8 @@ public:
             value_size_(FLAGS_value_size),
             key_size_(FLAGS_key_size),
             reads_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
-            readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads) {
+            readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
+            tx_size(FLAGS_tx_size) {
     }
 
     ~Benchmark() {
@@ -511,6 +518,9 @@ public:
                 method = &Benchmark::ReadWhileWriting;
             } else if (name == Slice("readrandomwriterandom")) {
                 method = &Benchmark::ReadRandomWriteRandom;
+            } else if (name == Slice("txfillrandom")) {
+                fresh_db = true;
+                method = &Benchmark::TxFillRandom;
             } else {
                 if (name != Slice()) {  // No error message for empty name
                     fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
@@ -546,6 +556,36 @@ private:
         ThreadState *thread;
 
         void (Benchmark::*method)(ThreadState *);
+    };
+
+    struct DbInserter {
+        DbInserter(pmem::kv::db *db): db(db) {
+        }
+
+        pmem::kv::status put(pmem::kv::string_view key, pmem::kv::string_view value) {
+            return db->put(key, value);
+        }
+
+        pmem::kv::status commit() {
+            return pmem::kv::status::OK;
+        }
+    private:
+        pmem::kv::db *db;
+    };
+
+    struct TxInserter {
+        TxInserter(pmem::kv::db *db): tx(db->begin_tx()) {
+        }
+
+        pmem::kv::status put(pmem::kv::string_view key, pmem::kv::string_view value) {
+           return tx.put(key, value);
+        }
+
+        pmem::kv::status commit() {
+           return tx.commit();
+        }
+    private:
+        pmem::kv::tx tx;
     };
 
     static void ThreadBody(void *v) {
@@ -655,6 +695,7 @@ private:
 		fprintf(stdout, "%-12s : %11.3f millis/op;\n", "open", ((g_env->NowMicros() - start) * 1e-3));
 	}
 
+    template <typename Inserter = DbInserter>
     void DoWrite(ThreadState *thread, bool seq) {
         if (num_ != FLAGS_num) {
             char msg[100];
@@ -666,16 +707,26 @@ private:
 
         pmem::kv::status s;
         int64_t bytes = 0;
-        for (int i = 0; i < num_; i++) {
-            const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
-            GenerateKeyFromInt(k, FLAGS_num, &key);
-            std::string value = std::string();
-            value.append(value_size_, 'X');
-            s = kv_->put(key.ToString(), value);
-            bytes += value_size_ + key.size();
+        auto batch_size = std::is_same<Inserter, TxInserter>::value ? tx_size : 1;
+        for (int n = 0; n < num_; n += batch_size) {
+            Inserter inserter(kv_);
+
+            for (int i = n; i < n + batch_size; i++) {
+                const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
+                GenerateKeyFromInt(k, FLAGS_num, &key);
+                std::string value = std::string();
+                value.append(value_size_, 'X');
+                s = inserter.put(key.ToString(), value);
+                bytes += value_size_ + key.size();
+                if (s != pmem::kv::status::OK) {
+                    fprintf(stdout, "Out of space at key %i\n", i);
+                    exit(1);
+                }
+            }
+            s = inserter.commit();
             thread->stats.FinishedSingleOp();
             if (s != pmem::kv::status::OK) {
-                fprintf(stdout, "Out of space at key %i\n", i);
+                fprintf(stdout, "Commit failed at batch %i\n", n);
                 exit(1);
             }
         }
@@ -683,11 +734,11 @@ private:
     }
 
     void WriteSeq(ThreadState *thread) {
-        DoWrite(thread, true);
+        DoWrite<DbInserter>(thread, true);
     }
 
     void WriteRandom(ThreadState *thread) {
-        DoWrite(thread, false);
+        DoWrite<DbInserter>(thread, false);
     }
 
     void DoRead(ThreadState *thread, bool seq, bool missing) {
@@ -848,6 +899,10 @@ private:
                 reads_done, writes_done, readwrites_, found);
         thread->stats.AddMessage(msg);
     }
+
+    void TxFillRandom(ThreadState* thread) {
+        DoWrite<TxInserter>(thread, false);
+    }
 };
 
 int main(int argc, char **argv) {
@@ -887,6 +942,8 @@ int main(int argc, char **argv) {
             FLAGS_db = argv[i] + 5;
         } else if (sscanf(argv[i], "--db_size_in_gb=%d%c", &n, &junk) == 1) {
             FLAGS_db_size_in_gb = n;
+        } else if (sscanf(argv[i], "--tx_size=%d%c", &n, &junk) == 1) {
+            FLAGS_tx_size = n;
         } else {
             fprintf(stderr, "Invalid flag '%s'\n", argv[i]);
             exit(1);
