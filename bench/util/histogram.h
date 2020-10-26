@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE-BSD file. See the AUTHORS file for names of contributors.
 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2017-2020, Intel Corporation
+
+
 #ifndef STORAGE_LEVELDB_UTIL_HISTOGRAM_H_
 #define STORAGE_LEVELDB_UTIL_HISTOGRAM_H_
 
@@ -20,6 +24,11 @@ class Histogram {
 
   std::string ToString() const;
 
+  double Median() const;
+  double Percentile(double p) const;
+  double Average() const;
+  double StandardDeviation() const;
+
  private:
   double min_;
   double max_;
@@ -31,10 +40,6 @@ class Histogram {
   static const double kBucketLimit[kNumBuckets];
   double buckets_[kNumBuckets];
 
-  double Median() const;
-  double Percentile(double p) const;
-  double Average() const;
-  double StandardDeviation() const;
 };
 
 }  // namespace leveldb
