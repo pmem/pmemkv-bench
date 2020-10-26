@@ -6,7 +6,7 @@
 // This source code is licensed under the Apache 2.0 License
 // (found in the LICENSE file in the root directory).
 
-// Copyright (c) 2017-2019, Intel Corporation
+// Copyright (c) 2017-2020, Intel Corporation
 // This source code is licensed under the Apache 2.0 License
 // (found in the LICENSE file in the root directory).
 
@@ -16,6 +16,12 @@
 #include <cstdlib>
 #include <memory>
 #include <chrono>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <iomanip>
+#include <map>
+#include <set>
 
 #include "leveldb/env.h"
 #include "testutil.h"
@@ -172,6 +178,130 @@ enum OperationType : unsigned char {
     kUpdate,
 };
 
+
+class BenchmarkLogger {
+protected:
+
+	std::map<std::string, std::map<std::string, std::string>> data_matrix;
+	std::map<std::string, std::string> global_data;
+	std::set<std::string> column_index;
+	std::string id_name = "benchmark";
+	std::map<std::string, Histogram> histograms;
+
+public:
+
+	void insert(std::string row, std::string column, std::string data)
+	{
+		column_index.insert(column);
+		data_matrix[row][column] = data;
+	}
+
+	void insert(std::string row, std::string column, const char *data)
+	{
+		insert(row, column, std::string(data));
+	}
+
+	template <typename T>
+	void insert(std::string row, std::string column, T data)
+	{
+		insert(row, column, std::to_string(data));
+	}
+
+	void insert(std::string column, std::string data)
+	{
+		global_data[column] = data;
+	}
+
+	void insert(std::string column, const char *data)
+	{
+		insert(column, std::string(data));
+	}
+
+	template <typename T>
+	void insert(std::string column, T data)
+	{
+		insert(column, std::to_string(data));
+	}
+
+	void insert(std::string name, Histogram histogram)
+	{
+		histograms[name] = histogram;
+	}
+
+	void print_histogram()
+	{
+		std::cout << "------------------------------------------------" <<  std::endl;
+		for ( auto &histogram: histograms )
+		{
+			std::cout << histogram.first << std::endl <<  histogram.second.ToString() << std::endl;
+		}
+	}
+
+	virtual void print() = 0;
+};
+
+class csvLogger : public BenchmarkLogger {
+private:
+
+	void combine_data()
+	{
+		for (auto &row : data_matrix)
+		{
+			for(auto &column: global_data)
+			{
+				insert(row.first, column.first, column.second);
+			}
+		}
+	}
+
+public:
+	void print()
+	{
+		combine_data();
+		std::cout<< id_name;
+		for( auto &column: column_index)
+		{
+			std::cout << "," << column;
+		}
+		std::cout << "\r\n";
+
+		for( auto &row: data_matrix)
+		{
+			std::cout << row.first;
+			for(auto &column: column_index)
+			{
+				std::cout << "," << data_matrix[row.first][column];
+			}
+			std::cout << "\r\n";
+		}
+	}
+};
+
+class HumanReadableLogger : public BenchmarkLogger
+{
+    void print()
+    {
+	for (auto &env_param : global_data)
+	{
+		std::cout<< std::left << std::setw(25) << env_param.first << " : "
+			<< std::setw(25) << env_param.second <<std::endl;
+	}
+	std::cout << "------------------------------------------------" <<  std::endl;
+	for( auto &benchmark: data_matrix)
+        {
+               std::cout << std::left << std::setw(12) << benchmark.first << ": ";
+		for(auto &result: benchmark.second)
+		{
+
+			std::cout << result.second << " " << result.first << " ";
+		}
+		std::cout << std::endl;
+
+        }
+    }
+};
+
+
 class Stats {
 private:
     double start_;
@@ -186,7 +316,7 @@ private:
     bool exclude_from_merge_;
 
 public:
-    Stats() { Start(); }
+    Stats() {  Start(); }
 
     void Start() {
         next_report_ = 100;
@@ -258,34 +388,41 @@ public:
         bytes_ += n;
     }
 
-    void Report(const Slice &name) {
+    float get_micros_per_op()
+    {
         // Pretend at least one op was done in case we are running a benchmark
         // that does not call FinishedSingleOp().
         if (done_ < 1) done_ = 1;
+    return seconds_ * 1e6 / done_;
+    }
 
+    float get_ops_per_sec()
+    {
+        // Pretend at least one op was done in case we are running a benchmark
+        // that does not call FinishedSingleOp().
+        if (done_ < 1) done_ = 1;
+        double elapsed = (finish_ - start_) * 1e-6;
+
+        return done_ / elapsed;
+    }
+
+    float get_throughput()
+    {
         // Rate and ops/sec is computed on actual elapsed time, not the sum of per-thread
         // elapsed times.
         double elapsed = (finish_ - start_) * 1e-6;
-        std::string extra;
-        if (bytes_ > 0) {
-            char rate[100];
-            snprintf(rate, sizeof(rate), "%6.1f MB/s",
-                     (bytes_ / 1048576.0) / elapsed);
-            extra = rate;
-        }
-        AppendWithSpace(&extra, message_);
-
-        fprintf(stdout, "%-12s : %11.3f micros/op %.0f ops/sec;%s%s\n",
-                name.ToString().c_str(),
-                seconds_ * 1e6 / done_,
-                done_ / elapsed,
-                (extra.empty() ? "" : " "),
-                extra.c_str());
-        if (FLAGS_histogram) {
-            fprintf(stdout, "Microseconds per op:\n%s\n", hist_.ToString().c_str());
-        }
-        fflush(stdout);
+        return (bytes_ / 1048576.0) / elapsed;
     }
+
+    std::string get_extra_data()
+    {
+    return message_;
+    }
+
+   Histogram get_histogram()
+   {
+    return hist_;
+   }
 };
 
 // State shared by all concurrent executions of the same benchmark.
@@ -367,19 +504,19 @@ private:
     int key_size_;
     int reads_;
     int64_t readwrites_;
+    BenchmarkLogger &logger;
 
     void PrintHeader() {
         PrintEnvironment();
-        fprintf(stdout, "Path:       %s\n", FLAGS_db);
-        fprintf(stdout, "Engine:     %s\n", FLAGS_engine);
-        fprintf(stdout, "Keys:       %d bytes each\n", FLAGS_key_size);
-        fprintf(stdout, "Values:     %d bytes each\n", FLAGS_value_size);
-        fprintf(stdout, "Entries:    %d\n", num_);
-        fprintf(stdout, "RawSize:    %.1f MB (estimated)\n",
+        logger.insert("Path", FLAGS_db);
+        logger.insert("Engine", FLAGS_engine);
+        logger.insert("Keys [bytes each]", FLAGS_key_size);
+        logger.insert("Values [bytes each]", FLAGS_value_size);
+        logger.insert("Entries", num_);
+        logger.insert("RawSize [MB (estimated)]",
                 ((static_cast<int64_t>(FLAGS_key_size + FLAGS_value_size) * num_)
                  / 1048576.0));
         PrintWarnings();
-        fprintf(stdout, "------------------------------------------------\n");
     }
 
     void PrintWarnings() {
@@ -397,7 +534,7 @@ private:
     void PrintEnvironment() {
 #if defined(__linux)
         time_t now = time(NULL);
-        fprintf(stdout, "Date:       %s", ctime(&now));  // ctime() adds newline
+        logger.insert("Date:", std::string(ctime(&now), 23));
 
         FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
         if (cpuinfo != NULL) {
@@ -420,21 +557,23 @@ private:
                 }
             }
             fclose(cpuinfo);
-            fprintf(stdout, "CPU:        %d * %s\n", num_cpus, cpu_type.c_str());
-            fprintf(stdout, "CPUCache:   %s\n", cache_size.c_str());
+            logger.insert("CPU", std::to_string(num_cpus));
+            logger.insert("CPU model", cpu_type);
+            logger.insert("CPUCache", cache_size);
         }
 #endif
     }
 
 public:
-    Benchmark()
+    Benchmark(BenchmarkLogger &logger)
             :
             kv_(NULL),
             num_(FLAGS_num),
             value_size_(FLAGS_value_size),
             key_size_(FLAGS_key_size),
             reads_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
-            readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads) {
+            readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
+            logger(logger) {
     }
 
     ~Benchmark() {
@@ -465,7 +604,6 @@ public:
 
     void Run() {
         PrintHeader();
-
         const char *benchmarks = FLAGS_benchmarks;
         while (benchmarks != NULL) {
             const char *sep = strchr(benchmarks, ',');
@@ -525,12 +663,12 @@ public:
                 if (FLAGS_db_size_in_gb > 0) {
                     auto start = g_env->NowMicros();
                     std::remove(FLAGS_db);
-                    fprintf(stdout, "%-12s : %11.3f millis/op;\n", "removed", ((g_env->NowMicros() - start) * 1e-3));
+                    logger.insert(name.ToString(), "[millis millis/op]", ((g_env->NowMicros() - start) * 1e-3));
                 }
             }
 
             if (kv_ == NULL) {
-                Open(fresh_db);
+                Open(fresh_db, name.ToString());
             }
 
             if (method != NULL) {
@@ -609,15 +747,22 @@ private:
         for (int i = 1; i < n; i++) {
             arg[0].thread->stats.Merge(arg[i].thread->stats);
         }
-        arg[0].thread->stats.Report(name);
-
+        auto thread_stats = arg[0].thread->stats;
+        logger.insert(name.ToString(), "micros/op" ,thread_stats.get_micros_per_op());
+        logger.insert(name.ToString(), "ops/sec" , thread_stats.get_ops_per_sec());
+        logger.insert(name.ToString(), "throughput [MB/s]" , thread_stats.get_throughput());
+        logger.insert(name.ToString(), "extra_data", thread_stats.get_extra_data());
+        if (FLAGS_histogram)
+        {
+            logger.insert(name.ToString(), thread_stats.get_histogram());
+        }
         for (int i = 0; i < n; i++) {
             delete arg[i].thread;
         }
         delete[] arg;
     }
 
-	void Open(bool fresh_db) {
+	void Open(bool fresh_db, std::string name) {
 		assert(kv_ == NULL);
 		auto start = g_env->NowMicros();
 		auto size = 1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb;
@@ -651,9 +796,8 @@ private:
 				USAGE.c_str());
 			exit(-42);
 		}
-
-		fprintf(stdout, "%-12s : %11.3f millis/op;\n", "open", ((g_env->NowMicros() - start) * 1e-3));
-	}
+		logger.insert(name, "Open [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
+    }
 
     void DoWrite(ThreadState *thread, bool seq) {
         if (num_ != FLAGS_num) {
@@ -843,12 +987,17 @@ private:
         }
         thread->stats.AddBytes(bytes);
         char msg[100];
-        snprintf(msg, sizeof(msg), "( reads:%" PRIu64 " writes:%" PRIu64 \
+        snprintf(msg, sizeof(msg), "(reads:%" PRIu64 " writes:%" PRIu64 \
                 " total:%" PRIu64 " found:%" PRIu64 ")",
                 reads_done, writes_done, readwrites_, found);
         thread->stats.AddMessage(msg);
     }
 };
+
+
+#define CSV 1
+
+static int FLAGS_logger = 0;
 
 int main(int argc, char **argv) {
     // Print usage statement if necessary
@@ -860,7 +1009,6 @@ int main(int argc, char **argv) {
             exit(1);
         }
     }
-
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
         int n;
@@ -887,6 +1035,8 @@ int main(int argc, char **argv) {
             FLAGS_db = argv[i] + 5;
         } else if (sscanf(argv[i], "--db_size_in_gb=%d%c", &n, &junk) == 1) {
             FLAGS_db_size_in_gb = n;
+        } else if (sscanf(argv[i], "--csv_output%c", &junk) != 0) {
+            FLAGS_logger = CSV;
         } else {
             fprintf(stderr, "Invalid flag '%s'\n", argv[i]);
             exit(1);
@@ -895,7 +1045,24 @@ int main(int argc, char **argv) {
 
     // Run benchmark against default environment
     g_env = leveldb::Env::Default();
-    Benchmark benchmark;
+
+    BenchmarkLogger *logger;
+    if(FLAGS_logger != CSV)
+    {
+        logger = new HumanReadableLogger();
+    }
+    else
+    {
+        logger = new csvLogger();
+    }
+    auto benchmark = Benchmark(*logger);
     benchmark.Run();
+
+    logger->print();
+    if (FLAGS_histogram)
+    {
+        logger->print_histogram();
+    }
+
     return 0;
 }
