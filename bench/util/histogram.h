@@ -20,6 +20,11 @@ class Histogram {
 
   std::string ToString() const;
 
+  double Median() const;
+  double Percentile(double p) const;
+  double Average() const;
+  double StandardDeviation() const;
+
  private:
   double min_;
   double max_;
@@ -31,10 +36,6 @@ class Histogram {
   static const double kBucketLimit[kNumBuckets];
   double buckets_[kNumBuckets];
 
-  double Median() const;
-  double Percentile(double p) const;
-  double Average() const;
-  double StandardDeviation() const;
 };
 
 }  // namespace leveldb
