@@ -6,9 +6,8 @@
 // This source code is licensed under the Apache 2.0 License
 // (found in the LICENSE file in the root directory).
 
-// Copyright (c) 2017-2019, Intel Corporation
-// This source code is licensed under the Apache 2.0 License
-// (found in the LICENSE file in the root directory).
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2017-2020, Intel Corporation
 
 #include <inttypes.h>
 #include <sys/types.h>
@@ -16,11 +15,16 @@
 #include <cstdlib>
 #include <memory>
 #include <chrono>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <iomanip>
 
 #include "leveldb/env.h"
 #include "testutil.h"
 #include "port/port_posix.h"
 #include "histogram.h"
+#include "csv.h"
 #include "mutexlock.h"
 #include "random.h"
 #include "libpmemkv.hpp"
@@ -55,12 +59,7 @@ static const std::string USAGE =
         "    readwhilewriting       (1 writer, N threads doing random reads)\n"
         "    readrandomwriterandom  (N threads doing random-read, random-write)\n";
 
-// Default list of comma-separated operations to run
-static const char *FLAGS_benchmarks =
-        "fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
 
-// Default engine name
-static const char *FLAGS_engine = "cmap";
 
 // Number of key/values to place in database
 static int FLAGS_num = 1000000;
@@ -172,6 +171,45 @@ enum OperationType : unsigned char {
     kUpdate,
 };
 
+
+class BenchmarkLogger : public CSV
+{
+private:
+	struct hist
+	{
+		std::string name;
+		std::string histogram;
+	};
+
+	std::vector<hist> histograms;
+public:
+	using CSV::insert;
+
+	BenchmarkLogger() : CSV("Benchmark") {};
+
+	void insert(std::string name, Histogram histogram)
+	{
+		histograms.push_back({name, histogram.ToString()});
+		std::vector<double> percentiles = {50, 75, 90, 99.9, 99.99};
+		for (double &percentile : percentiles)
+		{
+			insert(name, "Percentilie P" + std::to_string(percentile),
+				histogram.Percentile(percentile));
+		}
+		insert(name, "Median", histogram.Median());
+
+	}
+
+	void print_histogram()
+	{
+		std::cout << "------------------------------------------------" <<  std::endl;
+		for ( auto &histogram: histograms )
+		{
+			std::cout << histogram.name << std::endl <<  histogram.histogram << std::endl;
+		}
+	}
+};
+
 class Stats {
 private:
     double start_;
@@ -186,7 +224,7 @@ private:
     bool exclude_from_merge_;
 
 public:
-    Stats() { Start(); }
+    Stats() {  Start(); }
 
     void Start() {
         next_report_ = 100;
@@ -258,34 +296,41 @@ public:
         bytes_ += n;
     }
 
-    void Report(const Slice &name) {
+    float get_micros_per_op()
+    {
         // Pretend at least one op was done in case we are running a benchmark
         // that does not call FinishedSingleOp().
         if (done_ < 1) done_ = 1;
+    return seconds_ * 1e6 / done_;
+    }
 
+    float get_ops_per_sec()
+    {
+        // Pretend at least one op was done in case we are running a benchmark
+        // that does not call FinishedSingleOp().
+        if (done_ < 1) done_ = 1;
+        double elapsed = (finish_ - start_) * 1e-6;
+
+        return done_ / elapsed;
+    }
+
+    float get_throughput()
+    {
         // Rate and ops/sec is computed on actual elapsed time, not the sum of per-thread
         // elapsed times.
         double elapsed = (finish_ - start_) * 1e-6;
-        std::string extra;
-        if (bytes_ > 0) {
-            char rate[100];
-            snprintf(rate, sizeof(rate), "%6.1f MB/s",
-                     (bytes_ / 1048576.0) / elapsed);
-            extra = rate;
-        }
-        AppendWithSpace(&extra, message_);
-
-        fprintf(stdout, "%-12s : %11.3f micros/op %.0f ops/sec;%s%s\n",
-                name.ToString().c_str(),
-                seconds_ * 1e6 / done_,
-                done_ / elapsed,
-                (extra.empty() ? "" : " "),
-                extra.c_str());
-        if (FLAGS_histogram) {
-            fprintf(stdout, "Microseconds per op:\n%s\n", hist_.ToString().c_str());
-        }
-        fflush(stdout);
+        return (bytes_ / 1048576.0) / elapsed;
     }
+
+    std::string get_extra_data()
+    {
+    return message_;
+    }
+
+   Histogram& get_histogram()
+   {
+    return hist_;
+   }
 };
 
 // State shared by all concurrent executions of the same benchmark.
@@ -367,19 +412,24 @@ private:
     int key_size_;
     int reads_;
     int64_t readwrites_;
+    BenchmarkLogger &logger;
+    Slice name;
+    int n;
+    const char *engine;
+
+    void (Benchmark::*method)(ThreadState *) = NULL;
 
     void PrintHeader() {
         PrintEnvironment();
-        fprintf(stdout, "Path:       %s\n", FLAGS_db);
-        fprintf(stdout, "Engine:     %s\n", FLAGS_engine);
-        fprintf(stdout, "Keys:       %d bytes each\n", FLAGS_key_size);
-        fprintf(stdout, "Values:     %d bytes each\n", FLAGS_value_size);
-        fprintf(stdout, "Entries:    %d\n", num_);
-        fprintf(stdout, "RawSize:    %.1f MB (estimated)\n",
+        logger.insert(name.ToString(), "Path", FLAGS_db);
+        logger.insert(name.ToString(), "Engine", engine);
+        logger.insert(name.ToString(), "Keys [bytes each]", FLAGS_key_size);
+        logger.insert(name.ToString(), "Values [bytes each]", FLAGS_value_size);
+        logger.insert(name.ToString(), "Entries", num_);
+        logger.insert(name.ToString(), "RawSize [MB (estimated)]",
                 ((static_cast<int64_t>(FLAGS_key_size + FLAGS_value_size) * num_)
                  / 1048576.0));
         PrintWarnings();
-        fprintf(stdout, "------------------------------------------------\n");
     }
 
     void PrintWarnings() {
@@ -397,7 +447,8 @@ private:
     void PrintEnvironment() {
 #if defined(__linux)
         time_t now = time(NULL);
-        fprintf(stdout, "Date:       %s", ctime(&now));  // ctime() adds newline
+        auto formatted_time = std::string(ctime(&now));
+        logger.insert(name.ToString(), "Date:", formatted_time.erase(formatted_time.find_last_not_of("\n")));
 
         FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
         if (cpuinfo != NULL) {
@@ -420,25 +471,64 @@ private:
                 }
             }
             fclose(cpuinfo);
-            fprintf(stdout, "CPU:        %d * %s\n", num_cpus, cpu_type.c_str());
-            fprintf(stdout, "CPUCache:   %s\n", cache_size.c_str());
+            logger.insert(name.ToString(), "CPU", std::to_string(num_cpus));
+            logger.insert(name.ToString(), "CPU model", cpu_type);
+            logger.insert(name.ToString(), "CPUCache", cache_size);
         }
 #endif
     }
 
 public:
-    Benchmark()
+    Benchmark(Slice name, pmem::kv::db *kv, int num_threads, const char *engine, BenchmarkLogger &logger)
             :
-            kv_(NULL),
+            kv_(kv),
             num_(FLAGS_num),
             value_size_(FLAGS_value_size),
             key_size_(FLAGS_key_size),
             reads_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
-            readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads) {
+            readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
+            logger(logger),
+            n(num_threads),
+            name(name),
+            engine(engine)
+    {
+        fprintf(stderr, "running %s \n", name.ToString().c_str());
+        bool fresh_db = false;
+
+        if (name == Slice("fillseq")) {
+            fresh_db = true;
+            method = &Benchmark::WriteSeq;
+        } else if (name == Slice("fillrandom")) {
+            fresh_db = true;
+            method = &Benchmark::WriteRandom;
+        } else if (name == Slice("overwrite")) {
+            method = &Benchmark::WriteRandom;
+        } else if (name == Slice("readseq")) {
+            method = &Benchmark::ReadSeq;
+        } else if (name == Slice("readrandom")) {
+            method = &Benchmark::ReadRandom;
+        } else if (name == Slice("readmissing")) {
+            method = &Benchmark::ReadMissing;
+        } else if (name == Slice("deleteseq")) {
+            method = &Benchmark::DeleteSeq;
+        } else if (name == Slice("deleterandom")) {
+            method = &Benchmark::DeleteRandom;
+        } else if (name == Slice("readwhilewriting")) {
+            ++num_threads;
+            method = &Benchmark::ReadWhileWriting;
+        } else if (name == Slice("readrandomwriterandom")) {
+            method = &Benchmark::ReadRandomWriteRandom;
+        } else {
+            throw std::runtime_error("unknown benchmark: " + name.ToString());
+        }
+        PrintHeader();
+
+        Open(fresh_db, name.ToString());
     }
 
-    ~Benchmark() {
-        delete kv_;
+    ~Benchmark()
+    {
+        kv_->close();
     }
 
     Slice AllocateKey(std::unique_ptr<const char[]>& key_guard) {
@@ -464,80 +554,52 @@ public:
     }
 
     void Run() {
-        PrintHeader();
+        SharedState shared;
+        shared.total = n;
+        shared.num_initialized = 0;
+        shared.num_done = 0;
+        shared.start = false;
 
-        const char *benchmarks = FLAGS_benchmarks;
-        while (benchmarks != NULL) {
-            const char *sep = strchr(benchmarks, ',');
-            Slice name;
-            if (sep == NULL) {
-                name = benchmarks;
-                benchmarks = NULL;
-            } else {
-                name = Slice(benchmarks, sep - benchmarks);
-                benchmarks = sep + 1;
-            }
-
-            // Reset parameters that may be overridden below
-            num_ = FLAGS_num;
-            reads_ = (FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads);
-            value_size_ = FLAGS_value_size;
-            key_size_ = FLAGS_key_size;
-
-            void (Benchmark::*method)(ThreadState *) = NULL;
-            bool fresh_db = false;
-            int num_threads = FLAGS_threads;
-
-            if (name == Slice("fillseq")) {
-                fresh_db = true;
-                method = &Benchmark::WriteSeq;
-            } else if (name == Slice("fillrandom")) {
-                fresh_db = true;
-                method = &Benchmark::WriteRandom;
-            } else if (name == Slice("overwrite")) {
-                method = &Benchmark::WriteRandom;
-            } else if (name == Slice("readseq")) {
-                method = &Benchmark::ReadSeq;
-            } else if (name == Slice("readrandom")) {
-                method = &Benchmark::ReadRandom;
-            } else if (name == Slice("readmissing")) {
-                method = &Benchmark::ReadMissing;
-            } else if (name == Slice("deleteseq")) {
-                method = &Benchmark::DeleteSeq;
-            } else if (name == Slice("deleterandom")) {
-                method = &Benchmark::DeleteRandom;
-            } else if (name == Slice("readwhilewriting")) {
-                ++num_threads;
-                method = &Benchmark::ReadWhileWriting;
-            } else if (name == Slice("readrandomwriterandom")) {
-                method = &Benchmark::ReadRandomWriteRandom;
-            } else {
-                if (name != Slice()) {  // No error message for empty name
-                    fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
-                }
-            }
-
-            if (fresh_db) {
-                if (kv_ != NULL) {
-                    delete kv_;
-                    kv_ = NULL;
-                }
-                if (FLAGS_db_size_in_gb > 0) {
-                    auto start = g_env->NowMicros();
-                    std::remove(FLAGS_db);
-                    fprintf(stdout, "%-12s : %11.3f millis/op;\n", "removed", ((g_env->NowMicros() - start) * 1e-3));
-                }
-            }
-
-            if (kv_ == NULL) {
-                Open(fresh_db);
-            }
-
-            if (method != NULL) {
-                RunBenchmark(num_threads, name, method);
-            }
+        ThreadArg *arg = new ThreadArg[n];
+        for (int i = 0; i < n; i++) {
+            arg[i].bm = this;
+            arg[i].method = method;
+            arg[i].shared = &shared;
+            arg[i].thread = new ThreadState(i);
+            arg[i].thread->shared = &shared;
+            g_env->StartThread(ThreadBody, &arg[i]);
         }
+
+        shared.mu.Lock();
+        while (shared.num_initialized < n) {
+            shared.cv.Wait();
+        }
+
+        shared.start = true;
+        shared.cv.SignalAll();
+        while (shared.num_done < n) {
+            shared.cv.Wait();
+        }
+        shared.mu.Unlock();
+
+        for (int i = 1; i < n; i++) {
+            arg[0].thread->stats.Merge(arg[i].thread->stats);
+        }
+        auto thread_stats = arg[0].thread->stats;
+        logger.insert(name.ToString(), "micros/op" ,thread_stats.get_micros_per_op());
+        logger.insert(name.ToString(), "ops/sec" , thread_stats.get_ops_per_sec());
+        logger.insert(name.ToString(), "throughput [MB/s]" , thread_stats.get_throughput());
+        logger.insert(name.ToString(), "extra_data", thread_stats.get_extra_data());
+        if (FLAGS_histogram)
+        {
+            logger.insert(name.ToString(), thread_stats.get_histogram());
+        }
+        for (int i = 0; i < n; i++) {
+            delete arg[i].thread;
+        }
+        delete[] arg;
     }
+
 
 private:
     struct ThreadArg {
@@ -576,48 +638,8 @@ private:
         }
     }
 
-    void RunBenchmark(int n, Slice name,
-                      void (Benchmark::*method)(ThreadState *)) {
-        SharedState shared;
-        shared.total = n;
-        shared.num_initialized = 0;
-        shared.num_done = 0;
-        shared.start = false;
 
-        ThreadArg *arg = new ThreadArg[n];
-        for (int i = 0; i < n; i++) {
-            arg[i].bm = this;
-            arg[i].method = method;
-            arg[i].shared = &shared;
-            arg[i].thread = new ThreadState(i);
-            arg[i].thread->shared = &shared;
-            g_env->StartThread(ThreadBody, &arg[i]);
-        }
-
-        shared.mu.Lock();
-        while (shared.num_initialized < n) {
-            shared.cv.Wait();
-        }
-
-        shared.start = true;
-        shared.cv.SignalAll();
-        while (shared.num_done < n) {
-            shared.cv.Wait();
-        }
-        shared.mu.Unlock();
-
-        for (int i = 1; i < n; i++) {
-            arg[0].thread->stats.Merge(arg[i].thread->stats);
-        }
-        arg[0].thread->stats.Report(name);
-
-        for (int i = 0; i < n; i++) {
-            delete arg[i].thread;
-        }
-        delete[] arg;
-    }
-
-	void Open(bool fresh_db) {
+	void Open(bool fresh_db, std::string name) {
 		assert(kv_ == NULL);
 		auto start = g_env->NowMicros();
 		auto size = 1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb;
@@ -639,21 +661,30 @@ private:
 			if (cfg_s != pmem::kv::status::OK)
 				throw std::runtime_error(
 					"putting 'size' to config failed");
+
+			if (kv_ != NULL) {
+				delete kv_;
+				 kv_ = NULL;
+		        }
+			if (FLAGS_db_size_in_gb > 0) {
+				auto start = g_env->NowMicros();
+				std::remove(FLAGS_db);
+				logger.insert(name, "Remove [millis millis/op]", ((g_env->NowMicros() - start) * 1e-3));
+				}
 		}
 
 		kv_ = new pmem::kv::db;
-		auto s = kv_->open(FLAGS_engine, std::move(cfg));
+		auto s = kv_->open(engine, std::move(cfg));
 
 		if (s !=  pmem::kv::status::OK) {
 			fprintf(stderr,
 				"Cannot start engine (%s) for path (%s) with %i GB capacity\n%s\n\nUSAGE: %s",
-				FLAGS_engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str(),
+				engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str(),
 				USAGE.c_str());
 			exit(-42);
 		}
-
-		fprintf(stdout, "%-12s : %11.3f millis/op;\n", "open", ((g_env->NowMicros() - start) * 1e-3));
-	}
+		logger.insert(name, "Open [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
+    }
 
     void DoWrite(ThreadState *thread, bool seq) {
         if (num_ != FLAGS_num) {
@@ -843,7 +874,7 @@ private:
         }
         thread->stats.AddBytes(bytes);
         char msg[100];
-        snprintf(msg, sizeof(msg), "( reads:%" PRIu64 " writes:%" PRIu64 \
+        snprintf(msg, sizeof(msg), "(reads:%" PRIu64 " writes:%" PRIu64 \
                 " total:%" PRIu64 " found:%" PRIu64 ")",
                 reads_done, writes_done, readwrites_, found);
         thread->stats.AddMessage(msg);
@@ -851,6 +882,12 @@ private:
 };
 
 int main(int argc, char **argv) {
+    // Default list of comma-separated operations to run
+    static const char *FLAGS_benchmarks =
+        "fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
+    // Default engine name
+    static const char *FLAGS_engine = "cmap";
+
     // Print usage statement if necessary
     if (argc != 1) {
         if ((strcmp(argv[1], "?") == 0) || (strcmp(argv[1], "-?") == 0)
@@ -860,7 +897,6 @@ int main(int argc, char **argv) {
             exit(1);
         }
     }
-
     // Parse command-line arguments
     for (int i = 1; i < argc; i++) {
         int n;
@@ -895,7 +931,39 @@ int main(int argc, char **argv) {
 
     // Run benchmark against default environment
     g_env = leveldb::Env::Default();
-    Benchmark benchmark;
-    benchmark.Run();
-    return 0;
+
+    BenchmarkLogger logger = BenchmarkLogger();
+    int return_value = 0;
+    pmem::kv::db *kv = NULL;
+    const char *benchmarks = FLAGS_benchmarks;
+    while (benchmarks !=NULL)
+    {
+            const char *sep = strchr(benchmarks, ',');
+            Slice name;
+            if (sep == NULL) {
+                name = benchmarks;
+                benchmarks = NULL;
+            } else {
+                name = Slice(benchmarks, sep - benchmarks);
+                benchmarks = sep + 1;
+            }
+            try{
+                auto benchmark = Benchmark(name, kv, FLAGS_threads, FLAGS_engine, logger);
+                benchmark.Run();
+            } catch (std::exception &e)
+            {
+                std::cerr << e.what() << std::endl;
+                return_value = 1;
+                break;
+            }
+    }
+    if (kv !=NULL) {
+        delete kv;
+    }
+    logger.print();
+    if (FLAGS_histogram)
+    {
+        logger.print_histogram();
+    }
+    return return_value;
 }
