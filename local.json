@@ -1,0 +1,20 @@
+{
+   "db_bench" : {
+   	"repo_url" : "/opt/workspace/pmemkv-tools",
+	"commit" : "HEAD",
+	"env" : {"PMEM_IS_PMEM_FORCE" : "1"
+	},
+   	"params": [ "--db=/dev/shm/pmemkv", "--db_size_in_gb=1"]
+   },	
+   "pmemkv" : {
+   	"repo_url" : "/opt/workspace/pmemkv",
+	"commit": "HEAD",
+	"cmake_params" : ["-DCMAKE_BUILD_TYPE=Release",
+	                   "-DENGINE_RADIX=1",
+			   "-DBUILD_JSON_CONFIG=1",
+			   "-DCXX_STANDARD=20"],
+	"env" : {"CC" : "gcc",
+		 "CXX" : "g++"
+	}
+   }
+}
