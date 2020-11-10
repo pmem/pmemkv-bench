@@ -1,7 +1,7 @@
 {
    "db_bench" : {
-   	"repo_url" : "https://github.com/pmem/pmemkv-tools.git",
-	"commit" : "HEAD",
+   	"repo_url" : "https://github.com/karczex/pmemkv-tools.git",
+	"commit" : "benchmarking_CI",
 	"env" : {"PMEM_IS_PMEM_FORCE" : "1"
 	},
    	"params": [ "--db=/dev/shm/pmemkv", "--db_size_in_gb=1"]
