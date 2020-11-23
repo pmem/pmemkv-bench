@@ -1,6 +1,6 @@
 .ONESHELL:
 
-bench: CFLAGS = $(shell pkg-config --cflags libpmemkv) -DOS_LINUX -fno-builtin-memcmp -march=native -DNDEBUG -O2 -std=c++11
+bench: CFLAGS = $(shell pkg-config --cflags libpmemkv) -DOS_LINUX -fno-builtin-memcmp -march=native -DNDEBUG -O3 -std=c++11
 bench: LDFLAGS = -ldl -lpthread $(shell pkg-config --libs libpmemkv)
 
 reset:
