@@ -1,0 +1,155 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/* Copyright 2019-2020, Intel Corporation */
+
+/* Jenkinsfile - Scripts to create pmemkv-bench job */
+
+/* define common properties of pipelines: */
+description_param = '''
+	string {
+		name('DESCRIPTION')
+		defaultValue('')
+		trim(true)
+		description('Optional description for this execution')
+	}
+'''
+
+label_param = '''
+	string {
+		name('LABEL')
+		defaultValue('fedora')
+		trim(true)
+		description("Name of the node or group to run job on: rhel8_2, openSUSE15_2, fedora32, ubuntu20_04, ubuntu19.10, debian10, etc.")
+	}
+'''
+
+repo_url_param = '''
+	string {
+		name('REPO_URL')
+		defaultValue('https://github.com/pmem/pmemkv-bench.git')
+		trim(true)
+		description("Git repository address")
+	}
+'''
+
+branch_param = '''
+	string {
+		name('BRANCH')
+		defaultValue('master')
+		trim(true)
+		description("Repository's branch")
+	}
+'''
+
+test_options_param = '''
+	string {
+		name('TEST_OPTIONS')
+		defaultValue('bench_scenarios/basic.json')
+		trim(true)
+		description("Test builds, as defined in run-build.sh")
+	}
+'''
+
+test_additional_env = '''
+	string {
+		name('TEST_ADDITIONAL_ENV')
+		defaultValue('')
+		trim(true)
+		description("Set environment variables for test execution")
+	}
+'''
+
+type_param = '''
+	choiceParam('TEST_TYPE', ['benchmarks'], 'Type of tests')
+'''
+
+test_device = '''
+	choiceParam('DEVICE_TYPE', ['PMEM', 'DAX', 'NONE'], 'Select tested device type. For PMEM and DAX, capable persistent memory must be present on the server.')
+'''
+
+gitlab_connection = '''
+	properties {
+		gitLabConnection {
+			gitLabConnection('gitlabIT')
+		}
+	}
+'''
+
+email_options_param = '''
+	string {
+		name('EMAIL_RECIPIENTS')
+		defaultValue('')
+		trim(true)
+		description("Recipients of the e-mail sent after execution, separated by the comma.")
+	}
+	booleanParam('SEND_RESULTS', true, 'Uncheck to disable sending email with report after execution')
+'''
+
+/* Branch with Jenkins libraries to pull: */
+jenkins_files_branch_source = 'master'
+
+/* Loads pipeline scripts from repository */
+def remote_definition(current_job_script_path) {
+    return """
+		definition {
+			cpsScm {
+				scm {
+					git {
+						remote {
+							url('https://github.com/pmem/pmemkv-bench.git')
+							branch('${jenkins_files_branch_source}')
+							scriptPath('${current_job_script_path}')
+						}
+					}
+				}
+			}
+		}
+	"""
+}
+
+environmental_variables = """
+	environmentVariables {
+		envs(
+			api_lib: "jenkins_files/utils/jenkins/lib/api.groovy",
+			lib_path: "jenkins_files/utils/jenkins/lib/",
+			scripts_path: "jenkins_files/utils/jenkins/scripts/",
+			jenkins_files_repo: "https://github.com/pmem/pmemkv-bench.git",
+			jenkins_files_branch: "*/${jenkins_files_branch_source}",
+			info_addr: "https://pmem-val-jenkins.pact.intel.com/"
+		)
+	}
+"""
+
+triggers = '''
+	triggers {
+		gitlabPush {
+			buildOnMergeRequestEvents(true)
+			buildOnPushEvents(true)
+			enableCiSkip(false)
+			setBuildDescription(false)
+			rebuildOpenMergeRequest('never')
+		}
+	}
+'''
+
+node {
+	stage('pmemkv-bench'){
+        jobDsl scriptText: """pipelineJob("pmemkv-bench") {
+			parameters {
+				${label_param}
+				${branch_param}
+				${type_param}
+				${test_options_param}
+				${test_additional_env}
+				${test_device}
+				${repo_url_param}
+				${description_param}
+				${coverage_param}
+				${email_options_param}
+			}
+			${gitlab_connection}
+			${environmental_variables}
+			${triggers}
+			${remote_definition 'utils/jenkins/pmemkv-bench.jenkins'}
+		}"""
+    }
+}
