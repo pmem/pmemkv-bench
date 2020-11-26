@@ -1,0 +1,59 @@
+From 043ac63f5eba4e5a12b9c4448f82a3e9bfe99e20 Mon Sep 17 00:00:00 2001
+From: Pawel Karczewski <pawel.karczewski@intel.com>
+Date: Tue, 10 Nov 2020 13:08:19 +0100
+Subject: [PATCH] Sanitize env variables
+
+---
+ utils/jenkins/lib/api.groovy       | 13 +++++++++++++
+ utils/jenkins/pmemkv-tools.jenkins |  4 ++--
+ 2 files changed, 15 insertions(+), 2 deletions(-)
+
+diff --git a/utils/jenkins/lib/api.groovy b/utils/jenkins/lib/api.groovy
+index 33c6b70..e11b507 100644
+--- a/utils/jenkins/lib/api.groovy
++++ b/utils/jenkins/lib/api.groovy
+@@ -94,6 +94,19 @@ def run_bash_script(script_text, log_file = LOG_FILE, import_common_file = false
+ 	return retval
+ }
+ 
++/** 
++* Formats export string o be used in run_bash_script
++* @param variables List of environmental variables in format variable=value
++* @return formated string
++*/
++def format_exports( List<String> variables) {
++	def cmd = ""
++	for (String item : variables){
++		cmd = cmd.concat("export ").concat(item).concat("; ")
++	}
++	return cmd
++}
++
+ /**
+  *  Runs a script in bash and logs its output. Includes sourced 'common.sh'.
+  * @param script_text Bash script's content. No need for shebang, pass only commands to execute.
+diff --git a/utils/jenkins/pmemkv-tools.jenkins b/utils/jenkins/pmemkv-tools.jenkins
+index dcf2cc3..6855762 100644
+--- a/utils/jenkins/pmemkv-tools.jenkins
++++ b/utils/jenkins/pmemkv-tools.jenkins
+@@ -112,7 +112,8 @@ pipeline {
+ 								TEST_DIR = "/dev/shm"
+ 								break
+ 							}
+-						def ENV_VAL="export DEFAULT_TEST_DIR=${TEST_DIR}; export WORKDIR=${WORKSPACE_DIR}/${PMEMKV_DIR}; export SCRIPTSDIR=\$WORKDIR/utils/docker; export TESTS_LONG=ON; ${COV_PARAM}"
++						def ENV_VAL = libs.api.format_exports(params.TEST_ADDITIONAL_ENV.split())
++				
+ 						/* Specified Java version must be used for bindings */
+ 						def JAVA_HOME="JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64"
+ 						libs.api.echo_header("Running test type: ${params.TEST_TYPE}")
+@@ -125,7 +126,6 @@ pipeline {
+ 											catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+ 										libs.api.run_bash_script("""
+ 											${ENV_VAL}
+-											${params.TEST_ADDITIONAL_ENV}
+ 											python3 run_benchmark.py ${build}
+ 										""")
+ 										}
+-- 
+2.26.2
+
