@@ -61,12 +61,7 @@ static const std::string USAGE =
         "    readwhilewriting       (1 writer, N threads doing random reads)\n"
         "    readrandomwriterandom  (N threads doing random-read, random-write)\n";
 
-// Default list of comma-separated operations to run
-static const char *FLAGS_benchmarks =
-        "fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
 
-// Default engine name
-static const char *FLAGS_engine = "cmap";
 
 // Number of key/values to place in database
 static int FLAGS_num = 1000000;
@@ -508,11 +503,16 @@ private:
     int reads_;
     int64_t readwrites_;
     BenchmarkLogger &logger;
+    Slice name;
+    int n;
+    const char *engine;
+
+    void (Benchmark::*method)(ThreadState *) = NULL;
 
     void PrintHeader() {
         PrintEnvironment();
         logger.insert("Path", FLAGS_db);
-        logger.insert("Engine", FLAGS_engine);
+        logger.insert("Engine", engine);
         logger.insert( "Keys [bytes each]", FLAGS_key_size);
         logger.insert("Values [bytes each]", FLAGS_value_size);
         logger.insert("Entries", num_);
@@ -568,7 +568,7 @@ private:
     }
 
 public:
-    Benchmark(BenchmarkLogger &logger)
+    Benchmark(Slice name, int num_threads, const char *engine, BenchmarkLogger &logger)
             :
             kv_(NULL),
             num_(FLAGS_num),
@@ -576,7 +576,58 @@ public:
             key_size_(FLAGS_key_size),
             reads_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
             readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
-            logger(logger) {
+            logger(logger),
+            n(num_threads),
+            name(name),
+            engine(engine)
+    {
+        bool fresh_db = false;
+
+        if (name == Slice("fillseq")) {
+            fresh_db = true;
+            method = &Benchmark::WriteSeq;
+        } else if (name == Slice("fillrandom")) {
+            fresh_db = true;
+            method = &Benchmark::WriteRandom;
+        } else if (name == Slice("overwrite")) {
+            method = &Benchmark::WriteRandom;
+        } else if (name == Slice("readseq")) {
+            method = &Benchmark::ReadSeq;
+        } else if (name == Slice("readrandom")) {
+            method = &Benchmark::ReadRandom;
+        } else if (name == Slice("readmissing")) {
+            method = &Benchmark::ReadMissing;
+        } else if (name == Slice("deleteseq")) {
+            method = &Benchmark::DeleteSeq;
+        } else if (name == Slice("deleterandom")) {
+            method = &Benchmark::DeleteRandom;
+        } else if (name == Slice("readwhilewriting")) {
+            ++num_threads;
+            method = &Benchmark::ReadWhileWriting;
+        } else if (name == Slice("readrandomwriterandom")) {
+            method = &Benchmark::ReadRandomWriteRandom;
+        } else {
+            // XXX: Throw exception
+            if (name != Slice()) {  // No error message for empty name
+                fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
+            }
+        }
+
+        if (fresh_db) {
+            if (kv_ != NULL) {
+                delete kv_;
+                kv_ = NULL;
+            }
+            if (FLAGS_db_size_in_gb > 0) {
+                auto start = g_env->NowMicros();
+                std::remove(FLAGS_db);
+                logger.insert(name.ToString(), "[millis millis/op]", ((g_env->NowMicros() - start) * 1e-3));
+            }
+            }
+
+            if (kv_ == NULL) {
+                Open(fresh_db, name.ToString());
+            }
     }
 
     ~Benchmark() {
@@ -606,119 +657,6 @@ public:
     }
 
     void Run() {
-        PrintHeader();
-        const char *benchmarks = FLAGS_benchmarks;
-        while (benchmarks != NULL) {
-            const char *sep = strchr(benchmarks, ',');
-            Slice name;
-            if (sep == NULL) {
-                name = benchmarks;
-                benchmarks = NULL;
-            } else {
-                name = Slice(benchmarks, sep - benchmarks);
-                benchmarks = sep + 1;
-            }
-
-            // Reset parameters that may be overridden below
-            num_ = FLAGS_num;
-            reads_ = (FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads);
-            value_size_ = FLAGS_value_size;
-            key_size_ = FLAGS_key_size;
-
-            void (Benchmark::*method)(ThreadState *) = NULL;
-            bool fresh_db = false;
-            int num_threads = FLAGS_threads;
-
-            if (name == Slice("fillseq")) {
-                fresh_db = true;
-                method = &Benchmark::WriteSeq;
-            } else if (name == Slice("fillrandom")) {
-                fresh_db = true;
-                method = &Benchmark::WriteRandom;
-            } else if (name == Slice("overwrite")) {
-                method = &Benchmark::WriteRandom;
-            } else if (name == Slice("readseq")) {
-                method = &Benchmark::ReadSeq;
-            } else if (name == Slice("readrandom")) {
-                method = &Benchmark::ReadRandom;
-            } else if (name == Slice("readmissing")) {
-                method = &Benchmark::ReadMissing;
-            } else if (name == Slice("deleteseq")) {
-                method = &Benchmark::DeleteSeq;
-            } else if (name == Slice("deleterandom")) {
-                method = &Benchmark::DeleteRandom;
-            } else if (name == Slice("readwhilewriting")) {
-                ++num_threads;
-                method = &Benchmark::ReadWhileWriting;
-            } else if (name == Slice("readrandomwriterandom")) {
-                method = &Benchmark::ReadRandomWriteRandom;
-            } else {
-                if (name != Slice()) {  // No error message for empty name
-                    fprintf(stderr, "unknown benchmark '%s'\n", name.ToString().c_str());
-                }
-            }
-
-            if (fresh_db) {
-                if (kv_ != NULL) {
-                    delete kv_;
-                    kv_ = NULL;
-                }
-                if (FLAGS_db_size_in_gb > 0) {
-                    auto start = g_env->NowMicros();
-                    std::remove(FLAGS_db);
-                    logger.insert(name.ToString(), "[millis millis/op]", ((g_env->NowMicros() - start) * 1e-3));
-                }
-            }
-
-            if (kv_ == NULL) {
-                Open(fresh_db, name.ToString());
-            }
-
-            if (method != NULL) {
-                RunBenchmark(num_threads, name, method);
-            }
-        }
-    }
-
-private:
-    struct ThreadArg {
-        Benchmark *bm;
-        SharedState *shared;
-        ThreadState *thread;
-
-        void (Benchmark::*method)(ThreadState *);
-    };
-
-    static void ThreadBody(void *v) {
-        ThreadArg *arg = reinterpret_cast<ThreadArg *>(v);
-        SharedState *shared = arg->shared;
-        ThreadState *thread = arg->thread;
-        {
-            MutexLock l(&shared->mu);
-            shared->num_initialized++;
-            if (shared->num_initialized >= shared->total) {
-                shared->cv.SignalAll();
-            }
-            while (!shared->start) {
-                shared->cv.Wait();
-            }
-        }
-
-        thread->stats.Start();
-        (arg->bm->*(arg->method))(thread);
-        thread->stats.Stop();
-
-        {
-            MutexLock l(&shared->mu);
-            shared->num_done++;
-            if (shared->num_done >= shared->total) {
-                shared->cv.SignalAll();
-            }
-        }
-    }
-
-    void RunBenchmark(int n, Slice name,
-                      void (Benchmark::*method)(ThreadState *)) {
         SharedState shared;
         shared.total = n;
         shared.num_initialized = 0;
@@ -765,6 +703,45 @@ private:
         delete[] arg;
     }
 
+
+private:
+    struct ThreadArg {
+        Benchmark *bm;
+        SharedState *shared;
+        ThreadState *thread;
+
+        void (Benchmark::*method)(ThreadState *);
+    };
+
+    static void ThreadBody(void *v) {
+        ThreadArg *arg = reinterpret_cast<ThreadArg *>(v);
+        SharedState *shared = arg->shared;
+        ThreadState *thread = arg->thread;
+        {
+            MutexLock l(&shared->mu);
+            shared->num_initialized++;
+            if (shared->num_initialized >= shared->total) {
+                shared->cv.SignalAll();
+            }
+            while (!shared->start) {
+                shared->cv.Wait();
+            }
+        }
+
+        thread->stats.Start();
+        (arg->bm->*(arg->method))(thread);
+        thread->stats.Stop();
+
+        {
+            MutexLock l(&shared->mu);
+            shared->num_done++;
+            if (shared->num_done >= shared->total) {
+                shared->cv.SignalAll();
+            }
+        }
+    }
+
+
 	void Open(bool fresh_db, std::string name) {
 		assert(kv_ == NULL);
 		auto start = g_env->NowMicros();
@@ -790,12 +767,12 @@ private:
 		}
 
 		kv_ = new pmem::kv::db;
-		auto s = kv_->open(FLAGS_engine, std::move(cfg));
+		auto s = kv_->open(engine, std::move(cfg));
 
 		if (s !=  pmem::kv::status::OK) {
 			fprintf(stderr,
 				"Cannot start engine (%s) for path (%s) with %i GB capacity\n%s\n\nUSAGE: %s",
-				FLAGS_engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str(),
+				engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str(),
 				USAGE.c_str());
 			exit(-42);
 		}
@@ -997,12 +974,17 @@ private:
     }
 };
 
-
 #define CSV 1
 
-static int FLAGS_logger = 0;
 
 int main(int argc, char **argv) {
+	// Default list of comma-separated operations to run
+	static const char *FLAGS_benchmarks =
+        "fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
+	// Default engine name
+	static const char *FLAGS_engine = "cmap";
+	static int FLAGS_logger = 0;
+
     // Print usage statement if necessary
     if (argc != 1) {
         if ((strcmp(argv[1], "?") == 0) || (strcmp(argv[1], "-?") == 0)
@@ -1039,7 +1021,7 @@ int main(int argc, char **argv) {
         } else if (sscanf(argv[i], "--db_size_in_gb=%d%c", &n, &junk) == 1) {
             FLAGS_db_size_in_gb = n;
         } else if (sscanf(argv[i], "--csv_output%c", &junk) != 0) {
-        FLAGS_logger = CSV;
+	        FLAGS_logger = CSV;
         } else {
             fprintf(stderr, "Invalid flag '%s'\n", argv[i]);
             exit(1);
@@ -1058,8 +1040,22 @@ int main(int argc, char **argv) {
     {
         logger = new csvLogger();
     }
-    auto benchmark = Benchmark(*logger);
-    benchmark.Run();
+
+    const char *benchmarks = FLAGS_benchmarks;
+    while (benchmarks !=NULL)
+    {
+            const char *sep = strchr(benchmarks, ',');
+            Slice name;
+            if (sep == NULL) {
+                name = benchmarks;
+                benchmarks = NULL;
+            } else {
+                name = Slice(benchmarks, sep - benchmarks);
+                benchmarks = sep + 1;
+            }
+            auto benchmark = Benchmark(name, FLAGS_threads, FLAGS_engine, *logger);
+            benchmark.Run();
+    }
 
     logger->print();
     if (FLAGS_histogram)
