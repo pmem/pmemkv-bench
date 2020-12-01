@@ -43,6 +43,11 @@ static const std::string USAGE =
         "as percentage) for the ReadRandomWriteRandom workload. The default value "
         "90 means 90% operations out of all reads and writes operations are reads. "
         "In other words, 9 gets for every 1 put.) type: int32 default: 90\n"
+        "--disjoint=<0|1>           (specifies whether each thread works on disjoint set of keys. "
+        "0 means that each thread reads/writes to the db using all keys between 0 and `num`, so that "
+        "number of ops is `threads` * `num`. 1 means that each thread performs reads/writes using "
+        "only [`thread_id` * `num` / `threads`, (`thread_id` + 1) * `num` / `threads`] subset of keys, "
+        "so that total number of ops is `num` \n"
         "--benchmarks=<name>,       (comma-separated list of benchmarks to run)\n"
         "    fillseq                (load N values in sequential key order)\n"
         "    fillrandom             (load N values in random key order)\n"
@@ -64,6 +69,8 @@ static const char *FLAGS_engine = "cmap";
 
 // Number of key/values to place in database
 static int FLAGS_num = 1000000;
+
+static bool FLAGS_disjoint = false;
 
 // Number of read operations to do.  If negative, do FLAGS_num reads.
 static int FLAGS_reads = -1;
@@ -664,10 +671,14 @@ private:
         std::unique_ptr<const char[]> key_guard;
         Slice key = AllocateKey(key_guard);
 
+        auto num = FLAGS_disjoint ? num_ / FLAGS_threads : reads_;
+        auto start = FLAGS_disjoint ? thread->tid * num_ : 0;
+        auto end = FLAGS_disjoint ? (thread->tid + 1) * num_ : reads_;
+
         pmem::kv::status s;
         int64_t bytes = 0;
-        for (int i = 0; i < num_; i++) {
-            const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
+        for (int i = start; i < end; i++) {
+            const int k = seq ? i : (thread->rand.Next() % num) + start;
             GenerateKeyFromInt(k, FLAGS_num, &key);
             std::string value = std::string();
             value.append(value_size_, 'X');
@@ -696,8 +707,13 @@ private:
         int found = 0;
         std::unique_ptr<const char[]> key_guard;
         Slice key = AllocateKey(key_guard);
-        for (int i = 0; i < reads_; i++) {
-            const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
+
+        auto num = FLAGS_disjoint ? reads_ / FLAGS_threads : reads_;
+        auto start = FLAGS_disjoint ? thread->tid * num : 0;
+        auto end = FLAGS_disjoint ? (thread->tid + 1) * num : reads_;
+
+        for (int i = start; i < end; i++) {
+            const int k = seq ? i : (thread->rand.Next() % num) + start;
             GenerateKeyFromInt(k, FLAGS_num, &key, missing);
             std::string value;
             if (kv_->get(key.ToString(), &value) == pmem::kv::status::OK) found++;
@@ -706,7 +722,7 @@ private:
         }
         thread->stats.AddBytes(bytes);
         char msg[100];
-        snprintf(msg, sizeof(msg), "(%d of %d found)", found, reads_);
+        snprintf(msg, sizeof(msg), "(%d of %d found by one thread)", found, reads_);
         thread->stats.AddMessage(msg);
     }
 
@@ -887,6 +903,8 @@ int main(int argc, char **argv) {
             FLAGS_db = argv[i] + 5;
         } else if (sscanf(argv[i], "--db_size_in_gb=%d%c", &n, &junk) == 1) {
             FLAGS_db_size_in_gb = n;
+        } else if (sscanf(argv[i], "--disjoint=%d%c", &n, &junk) == 1 && (n == 0 || n == 1)) {
+            FLAGS_disjoint = n;
         } else {
             fprintf(stderr, "Invalid flag '%s'\n", argv[i]);
             exit(1);
