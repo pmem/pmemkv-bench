@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2017-2020, Intel Corporation
+
 .ONESHELL:
 
 bench: CFLAGS = $(shell pkg-config --cflags libpmemkv) -DOS_LINUX -fno-builtin-memcmp -march=native -DNDEBUG -O2 -std=c++11
