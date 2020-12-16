@@ -1,0 +1,103 @@
+{
+    "type": "object",
+    "properties": {
+        "db_bench": {
+            "type": "object",
+            "properties": {
+                "repo_url": {
+                    "type": "string",
+                    "description": "URL of pmemkv-bench git repository. May be path to local directory."
+                },
+                "commit": {
+                    "type": "string",
+                    "description": "Commit identifier. May be commit sha, tag or any other reference understood by git command."
+                },
+                "env": {
+                    "type": "object",
+                    "description": "Definition of environment variables passed to pmemkv-bench run.",
+                    "properties": {}
+                },
+                "params": {
+                    "description": "Parameters passed to pmemkv-bench binary",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "commit",
+                "env",
+                "params",
+                "repo_url"
+            ]
+        },
+        "pmemkv": {
+            "type": "object",
+            "properties": {
+                "repo_url": {
+                    "description": "URL of pmemkv git repository. May be path to local directory.",
+                    "type": "string"
+                },
+                "commit": {
+                    "description": "Commit identifier. May be commit sha, tag or any other reference understood by git command.",
+                    "type": "string"
+                },
+                "cmake_params": {
+                    "description": "Array of parameters passed to pmemkv cmake command.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "env": {
+                    "type": "object",
+                    "description": "Definition of environment variables passed to pmemkv build.",
+                    "properties": {}
+                }
+            },
+            "required": [
+                "cmake_params",
+                "commit",
+                "env",
+                "repo_url"
+            ]
+        },
+        "libpmemobjcpp": {
+            "type": "object",
+            "properties": {
+                "repo_url": {
+                    "description": "URL of libpmemobj-cpp git repository. May path to local directory.",
+                    "type": "string"
+                },
+                "commit": {
+                    "description": "Commit identifier. May be commit sha, tag or any other reference understood by git command.",
+                    "type": "string"
+                },
+                "cmake_params": {
+                    "description": "Array of parameters passed to libpmemobj-cpp cmake command.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "env": {
+                    "type": "object",
+                    "description": "Definition of environment variables passed to libpmemobj-cpp build.",
+                    "properties": {}
+                }
+            },
+            "required": [
+                "cmake_params",
+                "commit",
+                "env",
+                "repo_url"
+            ]
+        }
+    },
+    "required": [
+        "db_bench",
+        "libpmemobjcpp",
+        "pmemkv"
+    ]
+}
