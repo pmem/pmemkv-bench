@@ -1,26 +1,12 @@
-# pmemkv-tools
-Optional tools and utilities for pmemkv
+# pmemkv-bench
+Benchmark for pmemkv and its underlying libraries, based on leveldb's db_bench.
 
 *This is experimental pre-release software and should not be used in
 production systems. APIs and file formats may change at any time without
 preserving backwards compatibility. All known issues and limitations
 are logged as GitHub issues.*
 
-<a name="LD_LIBRARY_PATH"></a>
-
-LD_LIBRARY_PATH
----------------
-
-When running on Fedora, force the library path like this:
-
-```
-export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
-```
-
-<a name="benchmarking"></a>
-
-Benchmarking
-------------
+# Benchmarking
 
 The `pmemkv_bench` utility provides some standard read & write benchmarks. This is
 based on the `db_bench` utility included with LevelDB and RocksDB, although the
@@ -82,58 +68,11 @@ Benchmarking with poolset:
 ./pmemkv_bench --db=~/pmemkv.poolset
 ```
 
-<a name="baselines"></a>
+## Setting up environment
 
-Baselines
----------
-
-Baseline tests are simple single-threaded tests that compare average per-operation 
-latency between different language bindings and the `blackhole` engine. These are
-used to analyze and improve performance of our language bindings.
-
-Some of **baselines**, **examples** and other **programs**/**scripts** may use `tree3` engine,
-which is not enabled in pmemkv by default. You have to enable it using CMake option:
-`cmake .. -DENGINE_TREE3=ON`.
-For more details see [pmemkv/INSTALLING.md](https://github.com/pmem/pmemkv/blob/master/INSTALLING.md).
+If pmemkv is installed in some non-standard path, `LD_LIBRARY_PATH` variable should be set
+to the directory which contains `libpmemkv.so.1` file
 
 ```
-make baseline_c
-make baseline_cpp
-make baseline_java
-make baseline_nodejs
-make baseline_ruby
-make baseline_python
-```
-
-<a name="examples"></a>
-
-Examples
---------
-
-Examples are in individual repos:
-* [pmemkv/examples](https://github.com/pmem/pmemkv/tree/master/examples)
-* [pmemkv-java/examples](https://github.com/pmem/pmemkv-java/tree/master/examples)
-* [pmemkv-nodejs/examples](https://github.com/pmem/pmemkv-nodejs/tree/master/examples)
-* [pmemkv-ruby/examples](https://github.com/pmem/pmemkv-ruby/tree/master/examples)
-* [pmemkv-python/examples](https://github.com/pmem/pmemkv-python/tree/master/examples)
-
-
-Iteration
----------
-
-These measure iteration performance against a dataset with 100M keys. (15GB total)
-
-```
-make iteration_cpp
-make iteration_java
-make iteration_python
-```
-
-Storage Efficiency
-------------------
-
-This script reports the storage efficiency for different engines and value sizes.
-
-```
-make storage_efficiency
+export LD_LIBRARY_PATH=</path/to/libpmemkv>
 ```
