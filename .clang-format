@@ -20,7 +20,7 @@ BraceWrapping:
   IndentBraces:			false
 BreakBeforeBraces: Custom
 BreakStringLiterals: false
-ColumnLimit: 90
+ColumnLimit: 110
 ConstructorInitializerAllOnOneLineOrOnePerLine:	false
 ContinuationIndentWidth: 8
 FixNamespaceComments: false
