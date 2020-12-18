@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE-BSD file. See the AUTHORS file for names of contributors.
 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2020, Intel Corporation
+
 #ifndef STORAGE_LEVELDB_UTIL_MUTEXLOCK_H_
 #define STORAGE_LEVELDB_UTIL_MUTEXLOCK_H_
 
 #include "port/port_posix.h"
 #include "port/thread_annotations.h"
 
-namespace leveldb {
+namespace leveldb
+{
 
 // Helper class that locks a mutex on construction and unlocks the mutex when
 // the destructor of the MutexLock object is invoked.
@@ -21,21 +25,23 @@ namespace leveldb {
 //   }
 
 class SCOPED_LOCKABLE MutexLock {
- public:
-  explicit MutexLock(port::Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu)
-      : mu_(mu)  {
-    this->mu_->Lock();
-  }
-  ~MutexLock() UNLOCK_FUNCTION() { this->mu_->Unlock(); }
+public:
+	explicit MutexLock(port::Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu) : mu_(mu)
+	{
+		this->mu_->Lock();
+	}
+	~MutexLock() UNLOCK_FUNCTION()
+	{
+		this->mu_->Unlock();
+	}
 
- private:
-  port::Mutex *const mu_;
-  // No copying allowed
-  MutexLock(const MutexLock&);
-  void operator=(const MutexLock&);
+private:
+	port::Mutex *const mu_;
+	// No copying allowed
+	MutexLock(const MutexLock &);
+	void operator=(const MutexLock &);
 };
 
-}  // namespace leveldb
+} // namespace leveldb
 
-
-#endif  // STORAGE_LEVELDB_UTIL_MUTEXLOCK_H_
+#endif // STORAGE_LEVELDB_UTIL_MUTEXLOCK_H_
