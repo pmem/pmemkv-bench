@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE-BSD file. See the AUTHORS file for names of contributors.
 
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2020, Intel Corporation
+
 #ifndef STORAGE_LEVELDB_PORT_THREAD_ANNOTATIONS_H_
 #define STORAGE_LEVELDB_PORT_THREAD_ANNOTATIONS_H_
 
@@ -57,4 +60,4 @@
 #define NO_THREAD_SAFETY_ANALYSIS
 #endif
 
-#endif  // STORAGE_LEVELDB_PORT_THREAD_ANNOTATIONS_H_
+#endif // STORAGE_LEVELDB_PORT_THREAD_ANNOTATIONS_H_
