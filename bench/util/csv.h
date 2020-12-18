@@ -3,14 +3,13 @@
 
 #pragma once
 
+#include <iostream>
 #include <map>
 #include <ostream>
 #include <set>
 #include <string>
-#include <iostream>
 
-class CSV
-{
+class CSV {
 private:
 	/* Hold data in two-dimensional map of strings: data_matrix[row][column]
 	 */
@@ -43,19 +42,16 @@ public:
 	void print()
 	{
 		// Print first column name
-		std::cout<< id_name;
+		std::cout << id_name;
 
-		for( auto &column: columns)
-		{
+		for (auto &column : columns) {
 			std::cout << "," << column;
 		}
 		std::cout << "\r\n" << std::flush;
 
-		for( auto &row: data_matrix)
-		{
+		for (auto &row : data_matrix) {
 			std::cout << row.first;
-			for(auto &column: columns)
-			{
+			for (auto &column : columns) {
 				std::cout << "," << data_matrix[row.first][column];
 			}
 			std::cout << "\r\n" << std::flush;
