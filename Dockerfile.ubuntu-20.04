@@ -7,6 +7,7 @@ MAINTAINER szymon.romik@intel.com
 RUN apt update && \
 	DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
 	libpmemkv-dev \
+	libpmempool-dev \
 	make \
 	g++ \
 	pkg-config \
