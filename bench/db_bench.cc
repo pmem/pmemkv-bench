@@ -7,7 +7,7 @@
 // (found in the LICENSE file in the root directory).
 
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2017-2020, Intel Corporation
+// Copyright 2017-2021, Intel Corporation
 
 #include <chrono>
 #include <cstdio>
@@ -24,6 +24,7 @@
 #include "histogram.h"
 #include "leveldb/env.h"
 #include "libpmemkv.hpp"
+#include "libpmempool.h"
 #include "mutexlock.h"
 #include "port/port_posix.h"
 #include "random.h"
@@ -35,7 +36,7 @@ static const std::string USAGE =
 	"--db=<location>            (path to persistent pool, default: /dev/shm/pmemkv)\n"
 	"                           (note: file on DAX filesystem, DAX device, or poolset file)\n"
 	"--db_size_in_gb=<integer>  (size of persistent pool to create in GB, default: 0)\n"
-	"                           (note: always use 0 with existing poolset or device DAX configs)\n"
+	"                           (note: for existing poolset or device DAX configs use 0 or leave default value)\n"
 	"                           (note: when pool path is non-existing, value should be > 0)\n"
 	"--histogram=<0|1>          (show histograms when reporting latencies)\n"
 	"--num=<integer>            (number of keys to place in database, default: 1000000)\n"
@@ -696,12 +697,15 @@ private:
 				delete kv_;
 				kv_ = NULL;
 			}
-			if (FLAGS_db_size_in_gb > 0) {
-				auto start = g_env->NowMicros();
-				std::remove(FLAGS_db);
-				logger.insert(name, "Remove [millis millis/op]",
-					      ((g_env->NowMicros() - start) * 1e-3));
+			auto start = g_env->NowMicros();
+			/* Remove pool file. This should be
+			 * implemented using libpmempool for backward
+			 * compatibility. */
+			if (pmempool_rm(FLAGS_db, PMEMPOOL_RM_FORCE) != 0) {
+				throw std::runtime_error(std::string("Cannot remove pool: ") + FLAGS_db);
 			}
+			logger.insert(name, "Remove [millis millis/op]",
+				      ((g_env->NowMicros() - start) * 1e-3));
 		}
 
 		kv_ = new pmem::kv::db;
