@@ -12,6 +12,9 @@ The `pmemkv_bench` utility provides some standard read & write benchmarks. This 
 based on the `db_bench` utility included with LevelDB and RocksDB, although the
 list of supported parameters is slightly different.
 
+The `pmemkv-bench` may clear or remove pool passed in `--db` parameter, so pool, poolset or DAX
+device which contain existing data shouldn't be used.
+
 To build `pmemkv_bench`:
 
 ```
