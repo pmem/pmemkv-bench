@@ -574,7 +574,7 @@ public:
 	{
 		char *start = const_cast<char *>(key->data());
 		char *pos = start;
-		int bytes_to_fill = std::min(key_size_ - static_cast<int>(pos - start), 8);
+		int bytes_to_fill = std::min(key_size_, 8);
 		if (missing) {
 			int64_t v1 = -v;
 			memcpy(pos, static_cast<void *>(&v1), bytes_to_fill);
