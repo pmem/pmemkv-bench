@@ -182,37 +182,51 @@ enum OperationType : unsigned char {
 	kUpdate,
 };
 
-class BenchmarkLogger : public CSV {
+class BenchmarkLogger {
 private:
 	struct hist {
+		int id;
 		std::string name;
 		std::string histogram;
 	};
-
+	int id = 0;
 	std::vector<hist> histograms;
+	CSV<int> csv = CSV<int>("id");
 
 public:
-	using CSV::insert;
-
-	BenchmarkLogger() : CSV("Benchmark"){};
-
 	void insert(std::string name, Histogram histogram)
 	{
-		histograms.push_back({name, histogram.ToString()});
+		histograms.push_back({id, name, histogram.ToString()});
 		std::vector<double> percentiles = {50, 75, 90, 99.9, 99.99};
 		for (double &percentile : percentiles) {
-			insert(name, "Percentilie P" + std::to_string(percentile),
-			       histogram.Percentile(percentile));
+			csv.insert(id, "Percentilie P" + std::to_string(percentile) + " [micros/op]",
+				   histogram.Percentile(percentile));
 		}
-		insert(name, "Median", histogram.Median());
+		csv.insert(id, "Median [micros/op]", histogram.Median());
+	}
+	template <typename T>
+	void insert(std::string column, T data)
+	{
+		csv.insert(id, column, data);
 	}
 
 	void print_histogram()
 	{
 		std::cout << "------------------------------------------------" << std::endl;
 		for (auto &histogram : histograms) {
-			std::cout << histogram.name << std::endl << histogram.histogram << std::endl;
+			std::cout << "benchmark: " << histogram.id << ", " << histogram.name << std::endl
+				  << histogram.histogram << std::endl;
 		}
+	}
+
+	void print()
+	{
+		csv.print();
+	}
+
+	void next_benchmark()
+	{
+		id++;
 	}
 };
 
@@ -461,12 +475,12 @@ private:
 	void PrintHeader()
 	{
 		PrintEnvironment();
-		logger.insert(name.ToString(), "Path", FLAGS_db);
-		logger.insert(name.ToString(), "Engine", engine);
-		logger.insert(name.ToString(), "Keys [bytes each]", FLAGS_key_size);
-		logger.insert(name.ToString(), "Values [bytes each]", FLAGS_value_size);
-		logger.insert(name.ToString(), "Entries", num_);
-		logger.insert(name.ToString(), "RawSize [MB (estimated)]",
+		logger.insert("Path", FLAGS_db);
+		logger.insert("Engine", engine);
+		logger.insert("Keys [bytes each]", FLAGS_key_size);
+		logger.insert("Values [bytes each]", FLAGS_value_size);
+		logger.insert("Entries", num_);
+		logger.insert("RawSize [MB (estimated)]",
 			      ((static_cast<int64_t>(FLAGS_key_size + FLAGS_value_size) * num_) / 1048576.0));
 		PrintWarnings();
 	}
@@ -486,8 +500,7 @@ private:
 #if defined(__linux)
 		time_t now = time(NULL);
 		auto formatted_time = std::string(ctime(&now));
-		logger.insert(name.ToString(),
-			      "Date:", formatted_time.erase(formatted_time.find_last_not_of("\n")));
+		logger.insert("Date:", formatted_time.erase(formatted_time.find_last_not_of("\n")));
 
 		FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
 		if (cpuinfo != NULL) {
@@ -510,9 +523,9 @@ private:
 				}
 			}
 			fclose(cpuinfo);
-			logger.insert(name.ToString(), "CPU", std::to_string(num_cpus));
-			logger.insert(name.ToString(), "CPU model", cpu_type);
-			logger.insert(name.ToString(), "CPUCache", cache_size);
+			logger.insert("CPU", std::to_string(num_cpus));
+			logger.insert("CPU model", cpu_type);
+			logger.insert("CPUCache", cache_size);
 		}
 #endif
 	}
@@ -553,6 +566,8 @@ public:
 		} else {
 			throw std::runtime_error("unknown benchmark: " + name.ToString());
 		}
+		logger.next_benchmark();
+		logger.insert("Benchmark", name.ToString());
 		PrintHeader();
 
 		Open(fresh_db, name.ToString());
@@ -620,10 +635,10 @@ public:
 			arg[0].thread->stats.Merge(arg[i].thread->stats);
 		}
 		auto thread_stats = arg[0].thread->stats;
-		logger.insert(name.ToString(), "micros/op", thread_stats.get_micros_per_op());
-		logger.insert(name.ToString(), "ops/sec", thread_stats.get_ops_per_sec());
-		logger.insert(name.ToString(), "throughput [MB/s]", thread_stats.get_throughput());
-		logger.insert(name.ToString(), "extra_data", thread_stats.get_extra_data());
+		logger.insert("micros/op (avarage)", thread_stats.get_micros_per_op());
+		logger.insert("ops/sec", thread_stats.get_ops_per_sec());
+		logger.insert("throughput [MB/s]", thread_stats.get_throughput());
+		logger.insert("extra_data", thread_stats.get_extra_data());
 		if (FLAGS_histogram) {
 			logger.insert(name.ToString(), thread_stats.get_histogram());
 		}
@@ -704,8 +719,7 @@ private:
 			if (pmempool_rm(FLAGS_db, PMEMPOOL_RM_FORCE) != 0) {
 				throw std::runtime_error(std::string("Cannot remove pool: ") + FLAGS_db);
 			}
-			logger.insert(name, "Remove [millis millis/op]",
-				      ((g_env->NowMicros() - start) * 1e-3));
+			logger.insert("Remove [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
 		}
 
 		kv_ = new pmem::kv::db;
@@ -718,7 +732,7 @@ private:
 				USAGE.c_str());
 			exit(-42);
 		}
-		logger.insert(name, "Open [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
+		logger.insert("Open [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
 	}
 
 	void DoWrite(ThreadState *thread, bool seq)
