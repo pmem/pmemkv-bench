@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-/* Copyright 2020, Intel Corporation */
+/* Copyright 2020-2021, Intel Corporation */
 
 #pragma once
 
@@ -9,11 +9,12 @@
 #include <set>
 #include <string>
 
+template <typename IdType>
 class CSV {
 private:
 	/* Hold data in two-dimensional map of strings: data_matrix[row][column]
 	 */
-	std::map<std::string, std::map<std::string, std::string>> data_matrix;
+	std::map<IdType, std::map<std::string, std::string>> data_matrix;
 	/* List of all columns, which is filled during inserts. Needed for
 	 * printing header and data in the same order.
 	 * */
@@ -22,19 +23,19 @@ private:
 
 public:
 	CSV(std::string id_column_name) : id_name(id_column_name){};
-	void insert(std::string row, std::string column, std::string data)
+	void insert(IdType row, std::string column, std::string data)
 	{
 		columns.insert(column);
 		data_matrix[row][column] = data;
 	}
 
-	void insert(std::string row, std::string column, const char *data)
+	void insert(IdType row, std::string column, const char *data)
 	{
 		insert(row, column, std::string(data));
 	}
 
 	template <typename T>
-	void insert(std::string row, std::string column, T data)
+	void insert(IdType row, std::string column, T data)
 	{
 		insert(row, column, std::to_string(data));
 	}
