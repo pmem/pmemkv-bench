@@ -103,7 +103,6 @@ class DB_bench:
         self.pmemkv = pmemkv
         self.run_output = None
         self.env = config["env"]
-        self.benchmark_params = config["params"]
 
     def build(self):
         build_env = {
@@ -121,21 +120,22 @@ class DB_bench:
             self.logger.error(f"Cannot build benchmark: {e}")
             raise e
 
-    def run(self):
+    def run(self, environ, benchmark_params):
         find_file_path = lambda root_dir, filename: ":".join(
             set(
                 os.path.dirname(x)
                 for x in glob.glob(root_dir + f"/**/{filename}", recursive=True)
             )
         )
-
+        env = {}
+        for d in (self.env, environ):
+            env.update(d)
+        env["PATH"] = self.path + ":" + os.environ["PATH"]
+        env["LD_LIBRARY_PATH"] = find_file_path(self.pmemkv.install_path, "*.so.*")
+        self.logger.debug(f"{env=}")
         try:
-            env = self.env
-            env["PATH"] = self.path + ":" + os.environ["PATH"]
-            env["LD_LIBRARY_PATH"] = find_file_path(self.pmemkv.install_path, "*.so.*")
-            self.logger.debug(f"{env=}")
             self.run_output = subprocess.run(
-                ["pmemkv_bench"] + self.benchmark_params,
+                ["pmemkv_bench"] + benchmark_params,
                 cwd=self.path,
                 env=env,
                 capture_output=True,
@@ -221,9 +221,10 @@ Environment variables for MongoDB client configuration:
     parser = argparse.ArgumentParser(
         description=help_msg, formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument("config_path", help="Path to json config file")
+    parser.add_argument("build_config_path", help="Path to json config file")
+    parser.add_argument("benchmark_config_path", help="Path to json config file")
     args = parser.parse_args()
-    logger.info(f"{args.config_path=}")
+    logger.info(f"{args.build_config_path=}")
 
     # Setup database
     db_address = db_port = db_user = db_passwd = db_name = db_collection = None
@@ -240,9 +241,13 @@ Environment variables for MongoDB client configuration:
         )
 
     config = None
-    with open(args.config_path) as config_path:
+    with open(args.build_config_path) as config_path:
         config = json.loads(config_path.read())
     logger.info(config)
+    bench_params = None
+    with open(args.benchmark_config_path) as config_path:
+        bench_params = json.loads(config_path.read())
+    logger.info(bench_params)
 
     libpmemobjcpp = CmakeProject(config["libpmemobjcpp"])
     libpmemobjcpp.build()
@@ -253,19 +258,27 @@ Environment variables for MongoDB client configuration:
     benchmark = DB_bench(config["db_bench"], pmemkv)
 
     benchmark.build()
-    benchmark.run()
-    benchmark_results = benchmark.get_results()
+    for c in bench_params:
+        benchmark.run(c["env"], c["params"])
+        benchmark_results = benchmark.get_results()
 
-    report = {key: config[key] for key in config}
-    report["results"] = benchmark_results
+        report = {key: config[key] for key in config}
+        report["results"] = benchmark_results
 
-    print_results(report)
-    if db_address and db_port and db_user and db_passwd and db_name and db_collection:
-        upload_to_mongodb(
-            db_address, db_port, db_user, db_passwd, db_name, db_collection, report
-        )
-    else:
-        logger.warning("Results not uploaded to database")
+        print_results(report)
+        if (
+            db_address
+            and db_port
+            and db_user
+            and db_passwd
+            and db_name
+            and db_collection
+        ):
+            upload_to_mongodb(
+                db_address, db_port, db_user, db_passwd, db_name, db_collection, report
+            )
+        else:
+            logger.warning("Results not uploaded to database")
 
 
 if __name__ == "__main__":

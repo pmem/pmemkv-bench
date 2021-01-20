@@ -1,0 +1,19 @@
+[
+    {
+      "env": {
+            "PMEM_IS_PMEM_FORCE": "1"
+        },
+        "params": [
+            "--db=/dev/shm/pmemkv",
+            "--db_size_in_gb=1"
+        ]
+    },
+    {
+      "env": {
+        },
+        "params": [
+            "--db=/dev/shm/pmemkv",
+            "--db_size_in_gb=2"
+        ]
+    }
+]
