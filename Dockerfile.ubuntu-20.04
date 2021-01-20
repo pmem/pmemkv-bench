@@ -11,4 +11,6 @@ RUN apt update && \
 	make \
 	g++ \
 	pkg-config \
+	clang-format-10 \
+	python3-pymongo \
  && rm -rf /var/lib/apt/lists/*
