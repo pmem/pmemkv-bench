@@ -1,6 +1,6 @@
 {
     "db_bench": {
-        "repo_url": "https://github.com/pmem/pmemkv-tools.git",
+        "repo_url": "https://github.com/pmem/pmemkv-bench.git",
         "commit": "HEAD",
         "env": {}
     },

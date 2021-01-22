@@ -12,14 +12,16 @@ import csv
 import glob
 import logging
 import sys
+from importlib import util as import_util
+from jsonschema import validate
 
 from pymongo import MongoClient
 import pymongo.errors
 
 logger = logging.getLogger(__name__)
-sys.excepthook = lambda ex_type, ex, traceback: logger.error(
-    f"{ex_type.__name__}: {ex}"
-)
+# sys.excepthook = lambda ex_type, ex, traceback: logger.error(
+#    f"{ex_type.__name__}: {ex}"
+# )
 
 
 class Repository:
@@ -166,6 +168,28 @@ def print_results(results_dict):
     print(json.dumps(results_dict, indent=4, sort_keys=True))
 
 
+def load_scenarios(path, schema_path=None):
+    bench_params = None
+    if path.endswith(".py"):
+        spec = import_util.spec_from_file_location("cfg", path)
+        cfg = import_util.module_from_spec(spec)
+        spec.loader.exec_module(cfg)
+        try:
+            bench_params = cfg.generate()
+        except AttributeError:
+            raise AttributeError(
+                f"Cannot execute 'generate' function from user provided generator script: {path} "
+            )
+    else:
+        with open(path, "r") as config_path:
+            bench_params = json.loads(config_path.read())
+    if schema_path:
+        with open(schema_path, "r") as schema_file:
+            schema = json.loads(schema_file.read())
+            validate(instance=bench_params, schema=schema)
+    return bench_params
+
+
 def main():
     help_msg = """
 Runs pmemkv-bench for pmemkv and libpmemobjcpp defined in configuration json
@@ -240,14 +264,13 @@ Environment variables for MongoDB client configuration:
             f"Environmet variable {e} was not specified, so results cannot be uploaded to the database"
         )
 
-    config = None
-    with open(args.build_config_path) as config_path:
-        config = json.loads(config_path.read())
-    logger.info(config)
-    bench_params = None
-    with open(args.benchmark_config_path) as config_path:
-        bench_params = json.loads(config_path.read())
-    logger.info(bench_params)
+    config = load_scenarios(
+        args.build_config_path, "bench_scenarios/pmemkv-bench.schema.json"
+    )
+    logger.info(json.dumps(config, indent=4))
+
+    bench_params = load_scenarios(args.benchmark_config_path)
+    logger.info(json.dumps(bench_params, indent=4))
 
     libpmemobjcpp = CmakeProject(config["libpmemobjcpp"])
     libpmemobjcpp.build()
@@ -259,10 +282,12 @@ Environment variables for MongoDB client configuration:
 
     benchmark.build()
     for c in bench_params:
+        logger.info(f"Running: {c}")
         benchmark.run(c["env"], c["params"])
         benchmark_results = benchmark.get_results()
 
         report = {key: config[key] for key in config}
+        report = {key: bench_params[key] for key in bench_params}
         report["results"] = benchmark_results
 
         print_results(report)
