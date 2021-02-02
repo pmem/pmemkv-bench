@@ -1,21 +1,18 @@
 {
     "db_bench": {
-        "repo_url": "https://github.com/pmem/pmemkv-tools.git",
+        "repo_url": "https://github.com/pmem/pmemkv-bench.git",
         "commit": "HEAD",
-        "env": {
-            "PMEM_IS_PMEM_FORCE": "1"
-        },
-        "params": [
-            "--db=/dev/shm/pmemkv",
-            "--db_size_in_gb=1"
-        ]
+        "env": {}
     },
     "pmemkv": {
         "repo_url": "https://github.com/pmem/pmemkv.git",
         "commit": "HEAD",
         "cmake_params": [
             "-DCMAKE_BUILD_TYPE=Release",
+            "-DENGINE_CMAP=1",
+            "-DENGINE_CSMAP=1",
             "-DENGINE_RADIX=1",
+            "-DENGINE_STREE=1",
             "-DBUILD_JSON_CONFIG=1",
             "-DCXX_STANDARD=20",
             "-DBUILD_TESTS=OFF",
