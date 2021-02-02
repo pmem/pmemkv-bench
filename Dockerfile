@@ -15,6 +15,7 @@ RUN apt update && \
 	clang-format-10 \
 	python3-pymongo \
 	python3-pytest \
+	python3-jsonschema \
 	python3-pip\
  && rm -rf /var/lib/apt/lists/*
 
