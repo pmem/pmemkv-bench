@@ -14,6 +14,7 @@ RUN apt update && \
 	DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
 	clang-format-10 \
 	python3-pymongo \
+	python3-jsonschema \
 	python3-pytest \
 	python3-pip \
  && rm -rf /var/lib/apt/lists/*

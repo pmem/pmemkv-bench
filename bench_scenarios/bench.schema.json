@@ -1,0 +1,33 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "array",
+    "items": [
+        {
+            "type": "object",
+            "properties": {
+                "env": {
+                    "type": "object",
+                    "description": "Definition of environment variables passed to pmemkv-bench run."
+                },
+                "params": {
+                    "type": "object",
+                    "description": "Parameters passed to pmemkv-bench binary",
+                    "properties": {},
+                    "required": [
+                        "--benchmarks",
+                        "--value_size",
+                        "--threads",
+                        "--engine",
+                        "--num",
+                        "--db",
+                        "--db_size_in_gb"
+                    ]
+                }
+            },
+            "required": [
+                "env",
+                "params"
+            ]
+        }
+    ]
+}

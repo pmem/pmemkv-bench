@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2020, Intel Corporation
+# Copyright 2020-2021, Intel Corporation
 
 import tempfile
 import os
@@ -12,6 +12,8 @@ import csv
 import glob
 import logging
 import sys
+from importlib import util as import_util
+from jsonschema import validate
 
 from pymongo import MongoClient
 import pymongo.errors
@@ -24,11 +26,13 @@ sys.excepthook = lambda ex_type, ex, traceback: logger.error(
 
 class Repository:
     def __init__(self, config: dict):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(type(self).__name__)
 
-        self.directory = tempfile.TemporaryDirectory()
-        self.path = self.directory.name
         self.url = config["repo_url"]
+        self.directory = tempfile.TemporaryDirectory(
+            prefix=self.url.replace("/", ".").replace(":", ".")
+        )
+        self.path = self.directory.name
         self.commit = config["commit"]
         self.clone()
         self.checkout()
@@ -61,7 +65,7 @@ class Repository:
 
 class CmakeProject:
     def __init__(self, config: dict, dependencies: list = []):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(type(self).__name__)
 
         self.repo = Repository(config)
         self.path = self.repo.path
@@ -108,14 +112,13 @@ class CmakeProject:
 
 class DB_bench:
     def __init__(self, config: dict, pmemkv: CmakeProject):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(type(self).__name__)
 
         self.repo = Repository(config)
         self.path = self.repo.path
         self.pmemkv = pmemkv
         self.run_output = None
         self.env = config["env"]
-        self.benchmark_params = config["params"]
 
     def build(self):
         build_env = {
@@ -133,21 +136,31 @@ class DB_bench:
             self.logger.error(f"Cannot build benchmark: {e}")
             raise e
 
-    def run(self):
+    def run(self, environ, benchmark_params):
         find_file_path = lambda root_dir, filename: ":".join(
             set(
                 os.path.dirname(x)
                 for x in glob.glob(root_dir + f"/**/{filename}", recursive=True)
             )
         )
+        env = {}
+        for d in (self.env, environ):
+            env.update(d)
+        env["PATH"] = self.path + ":" + os.environ["PATH"]
+        env["LD_LIBRARY_PATH"] = find_file_path(self.pmemkv.install_path, "*.so.*")
+        self.logger.debug(f"{env=}")
+        params_list = [f"{key}={benchmark_params[key]}" for key in benchmark_params]
 
+        numa_settings = []
+        if "NUMACTL_CPUBIND" in env:
+            cpubind = env["NUMACTL_CPUBIND"]
+            numa_settings = ["numactl", f"--cpubind={cpubind}"]
+
+        cmd = numa_settings + ["pmemkv_bench"] + params_list
+        logger.info(cmd)
         try:
-            env = self.env
-            env["PATH"] = self.path + ":" + os.environ["PATH"]
-            env["LD_LIBRARY_PATH"] = find_file_path(self.pmemkv.install_path, "*.so.*")
-            self.logger.debug(f"{env=}")
             self.run_output = subprocess.run(
-                ["pmemkv_bench"] + self.benchmark_params,
+                cmd,
                 cwd=self.path,
                 env=env,
                 capture_output=True,
@@ -159,6 +172,11 @@ class DB_bench:
             self.logger.error(f"with error: {e.stderr} ")
             raise e
 
+    def cleanup(self, benchmark_params):
+        db_path = benchmark_params["--db"]
+        subprocess.run(["pmempool", "rm", db_path], cwd=self.path, check=True)
+        self.logger.info(f"{db_path} cleaned")
+
     def get_results(self):
         OutputReader = csv.DictReader(
             self.run_output.stdout.decode("UTF-8").split("\n"), delimiter=","
@@ -167,15 +185,39 @@ class DB_bench:
 
 
 def upload_to_mongodb(address, port, username, password, db_name, collection, data):
+    logger = logging.getLogger("mongodb")
     client = MongoClient(address, int(port), username=username, password=password)
     with client:
         db = client[db_name]
         collection = db[collection]
-        collection.insert_one(data)
+        result = collection.insert_one(data)
+        logger.info(f"Inserted: {result.inserted_id} into {address}:{port}/{db_name}")
 
 
 def print_results(results_dict):
     print(json.dumps(results_dict, indent=4, sort_keys=True))
+
+
+def load_scenarios(path, schema_path=None):
+    bench_params = None
+    if path.endswith(".py"):
+        spec = import_util.spec_from_file_location("cfg", path)
+        cfg = import_util.module_from_spec(spec)
+        spec.loader.exec_module(cfg)
+        try:
+            bench_params = cfg.generate()
+        except AttributeError:
+            raise AttributeError(
+                f"Cannot execute 'generate' function from user provided generator script: {path} "
+            )
+    else:
+        with open(path, "r") as config_path:
+            bench_params = json.loads(config_path.read())
+    if schema_path:
+        with open(schema_path, "r") as schema_file:
+            schema = json.loads(schema_file.read())
+            validate(instance=bench_params, schema=schema)
+    return bench_params
 
 
 def main():
@@ -233,9 +275,18 @@ Environment variables for MongoDB client configuration:
     parser = argparse.ArgumentParser(
         description=help_msg, formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument("config_path", help="Path to json config file")
+    parser.add_argument(
+        "build_config_path",
+        help="""Path to json config file or python script, which provides generate() method.
+This parameter sets configuration of build process. Input structure is specified by bench_scenarios/build.schema.json""",
+    )
+    parser.add_argument(
+        "benchmark_config_path",
+        help="""Path to json config file or python script, which provides generate() method.
+This parameter sets configuration of benchmarking process. Input structure is specified by bench_scenarios/bench.schema.json""",
+    )
     args = parser.parse_args()
-    logger.info(f"{args.config_path=}")
+    logger.info(f"{args.build_config_path=}")
 
     # Setup database
     db_address = db_port = db_user = db_passwd = db_name = db_collection = None
@@ -248,13 +299,21 @@ Environment variables for MongoDB client configuration:
         db_collection = os.environ["MONGO_DB_COLLECTION"]
     except KeyError as e:
         logger.warning(
-            f"Environmet variable {e} was not specified, so results cannot be uploaded to the database"
+            f"Environment variable {e} was not specified, so results cannot be uploaded to the database"
         )
+    schema_dir = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)), "bench_scenarios"
+    )
 
-    config = None
-    with open(args.config_path) as config_path:
-        config = json.loads(config_path.read())
-    logger.info(config)
+    config = load_scenarios(
+        args.build_config_path, os.path.join(schema_dir, "build.schema.json")
+    )
+    logger.info(json.dumps(config, indent=4))
+
+    bench_params = load_scenarios(
+        args.benchmark_config_path, os.path.join(schema_dir, "bench.schema.json")
+    )
+    logger.info(json.dumps(bench_params, indent=4))
 
     libpmemobjcpp = CmakeProject(config["libpmemobjcpp"])
     libpmemobjcpp.build()
@@ -265,19 +324,31 @@ Environment variables for MongoDB client configuration:
     benchmark = DB_bench(config["db_bench"], pmemkv)
 
     benchmark.build()
-    benchmark.run()
-    benchmark_results = benchmark.get_results()
+    for test_case in bench_params:
+        logger.info(f"Running: {test_case}")
+        benchmark.run(test_case["env"], test_case["params"])
+        benchmark.cleanup(test_case["params"])
+        benchmark_results = benchmark.get_results()
 
-    report = {key: config[key] for key in config}
-    report["results"] = benchmark_results
+        report = {}
+        report["build_configuration"] = config
+        report["runtime_parameters"] = test_case
+        report["results"] = benchmark_results
 
-    print_results(report)
-    if db_address and db_port and db_user and db_passwd and db_name and db_collection:
-        upload_to_mongodb(
-            db_address, db_port, db_user, db_passwd, db_name, db_collection, report
-        )
-    else:
-        logger.warning("Results not uploaded to database")
+        print_results(report)
+        if (
+            db_address
+            and db_port
+            and db_user
+            and db_passwd
+            and db_name
+            and db_collection
+        ):
+            upload_to_mongodb(
+                db_address, db_port, db_user, db_passwd, db_name, db_collection, report
+            )
+        else:
+            logger.warning("Results not uploaded to database")
 
 
 if __name__ == "__main__":
