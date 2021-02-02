@@ -1,0 +1,22 @@
+[
+    {
+        "env": {
+            "PMEM_IS_PMEM_FORCE": "1"
+        },
+        "params": {
+            "--db": "/dev/shm/pmemkv",
+            "--db_size_in_gb": "1",
+            "--benchmarks": "fillseq",
+            "--engine": "cmap"
+        }
+    },
+    {
+        "env": {},
+        "params": {
+            "--db": "/dev/shm/pmemkv",
+            "--db_size_in_gb": "2",
+            "--benchmarks": "fillseq",
+            "--engine": "radix"
+        }
+    }
+]
