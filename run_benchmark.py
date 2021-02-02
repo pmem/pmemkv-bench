@@ -32,6 +32,7 @@ class Repository:
         self.commit = config["commit"]
         self.clone()
         self.checkout()
+        config["commit"] = self._resolve_sha()
 
     def __str__(self):
         return f"{self.url} in {self.path}"
@@ -45,6 +46,15 @@ class Repository:
     def clone(self):
         self.logger.info(f"Cloning repository: {self.url}")
         subprocess.run("git clone".split() + [self.url, self.path], check=True)
+
+    def _resolve_sha(self):
+        return subprocess.run(
+            ["git", "rev-parse", self.commit],
+            cwd=self.path,
+            capture_output=True,
+            check=True,
+            universal_newlines=True,
+        ).stdout
 
 
 class CmakeProject:
