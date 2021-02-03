@@ -1,16 +1,25 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2016-2021, Intel Corporation
 
-FROM ubuntu:20.04
-MAINTAINER szymon.romik@intel.com
+FROM debian:testing
+MAINTAINER igor.chorazewicz@intel.com
 
 RUN apt update && \
 	DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
 	libpmemkv-dev \
 	libpmempool-dev \
+	libtbb-dev \
+	libmemkind-dev \
+	libpmemobj-dev \
+	rapidjson-dev \
 	make \
 	g++ \
 	pkg-config \
-	clang-format-10 \
+	clang-format-11 \
 	python3-pymongo \
+	python3-jsonschema \
+	git \
+	cmake \
+	ca-certificates \
+	numactl \
  && rm -rf /var/lib/apt/lists/*
