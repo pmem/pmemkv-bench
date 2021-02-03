@@ -1021,7 +1021,7 @@ int main(int argc, char **argv)
 {
 	// Default list of comma-separated operations to run
 	static const char *FLAGS_benchmarks =
-		"fillseq,fillrandom,txfillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
+		"fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
 	// Default engine name
 	static const char *FLAGS_engine = "cmap";
 
