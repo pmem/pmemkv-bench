@@ -26,7 +26,7 @@ run_bench: bench
 cppformat: $(CPP_FILES)
 
 $(CPP_FILES):
-	clang-format-10 -i $@
+	clang-format-11 -i $@
 
 pythonformat: $(PYTHON_FILES)
 
