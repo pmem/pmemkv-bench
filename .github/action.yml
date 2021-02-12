@@ -1,0 +1,11 @@
+name: 'pmemkv-bench CI'
+description: 'pmemkv-bench'
+inputs:
+  entrypoint_params:  # id of input
+    description: 'Parameters for Docker entrypoint'
+    required: true
+runs:
+  using: 'docker'
+  image: '../Dockerfile'
+  args:
+    - ${{ inputs.entrypoint_params }}
