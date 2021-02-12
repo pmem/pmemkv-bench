@@ -1,0 +1,14 @@
+on: [push]
+
+jobs:
+  hello_world_job:
+    runs-on: ubuntu-latest
+    name: pmemkv-bench CI job
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: building test
+        uses: ./ # Uses an action in the root directory
+        id: make
+        with:
+          entrypoint_params: '"Build project"'
