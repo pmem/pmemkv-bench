@@ -794,8 +794,8 @@ private:
 		Slice key = AllocateKey(key_guard);
 
 		auto num = FLAGS_disjoint ? num_ / FLAGS_threads : num_;
-		auto start = FLAGS_disjoint ? thread->tid * num_ : 0;
-		auto end = FLAGS_disjoint ? (thread->tid + 1) * num_ : num_;
+		auto start = FLAGS_disjoint ? thread->tid * num : 0;
+		auto end = FLAGS_disjoint ? (thread->tid + 1) * num : num_;
 
 		pmem::kv::status s;
 		int64_t bytes = 0;
