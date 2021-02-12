@@ -1,0 +1,14 @@
+on: [push, pull_request]
+
+jobs:
+  pmemkv-bench-CI:
+    runs-on: ubuntu-latest
+    name: pmemkv-bench CI job
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: pmemkv-bench tests
+        uses: ./.github # Uses an action in the .github directory
+        id: make
+        with:
+          entrypoint_params: '"Build project"'
