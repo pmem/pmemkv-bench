@@ -14,6 +14,7 @@ RUN apt update && \
 	DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
 	clang-format-10 \
 	python3-pymongo \
+	python3-pytest \
  && rm -rf /var/lib/apt/lists/*
 
 COPY . /pmemkv-bench
