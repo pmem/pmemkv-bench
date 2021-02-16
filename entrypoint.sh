@@ -11,5 +11,5 @@ echo "$1"
 project_dir=/pmemkv-bench
 
 echo "run basic test"
-python3 ${project_dir}/run_benchmark.py ${project_dir}/bench_scenarios/basic.json
+pytest-3 -v ${project_dir}/tests/test.py
 
