@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <inttypes.h>
 #include <iomanip>
 #include <iostream>
@@ -504,9 +505,11 @@ private:
 	void PrintEnvironment()
 	{
 #if defined(__linux)
-		time_t now = time(NULL);
-		auto formatted_time = std::string(ctime(&now));
-		logger.insert("Date:", formatted_time.erase(formatted_time.find_last_of("\n")));
+		auto now = std::time(NULL);
+		constexpr int time_string_size = 18;
+		char formatted_time[time_string_size];
+		std::strftime(formatted_time, time_string_size, "%D %T ", localtime(&now));
+		logger.insert("Date:", std::string(formatted_time));
 
 		FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
 		if (cpuinfo != NULL) {
