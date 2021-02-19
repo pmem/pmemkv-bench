@@ -506,7 +506,7 @@ private:
 #if defined(__linux)
 		time_t now = time(NULL);
 		auto formatted_time = std::string(ctime(&now));
-		logger.insert("Date:", formatted_time.erase(formatted_time.find_last_not_of("\n")));
+		logger.insert("Date:", formatted_time.erase(formatted_time.find_last_of("\n")));
 
 		FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
 		if (cpuinfo != NULL) {
