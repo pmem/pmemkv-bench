@@ -8,7 +8,7 @@ set -x
 
 echo "$1"
 
-project_dir=/pmemkv-bench
+project_dir=${WORKDIR:-/pmemkv-bench}
 
 echo "run basic test"
 pytest-3 -v ${project_dir}/tests/test.py
