@@ -1,5 +1,8 @@
 on: [push, pull_request]
 
+env:
+  WORKDIR:   ${{ github.workspace }}
+
 jobs:
   pmemkv-bench-CI:
     runs-on: ubuntu-latest
