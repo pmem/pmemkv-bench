@@ -174,7 +174,8 @@ class DB_bench:
 
     def cleanup(self, benchmark_params):
         db_path = benchmark_params["--db"]
-        subprocess.run(["pmempool", "rm", db_path], cwd=self.path, check=True)
+        if os.path.isfile(db_path):
+            subprocess.run(["pmempool", "rm", db_path], cwd=self.path, check=True)
         self.logger.info(f"{db_path} cleaned")
 
     def get_results(self):

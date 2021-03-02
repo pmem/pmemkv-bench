@@ -29,7 +29,16 @@ def test_help():
     assert e.value.code == 0
 
 
-def test_json():
+@pytest.mark.parametrize(
+    "engine,is_volatile,benchmarks",
+    [
+        ("cmap", 0, "fillrandom,readrandom"),
+        ("csmap", 0, "fillrandom,readrandom"),
+        ("vcmap", 1, "fillrandom,readrandom"),
+        ("vsmap", 1, "fillrandom,readrandom"),
+    ],
+)
+def test_json(engine, is_volatile, benchmarks):
     """Basic integration test for run_benchmark.py. It runs full
     benchmarking process for arbitrarily chosen parameters.
     """
@@ -50,6 +59,7 @@ def test_json():
                 "-DENGINE_RADIX=1",
                 "-DENGINE_STREE=1",
                 "-DENGINE_ROBINHOOD=1",
+                "-DENGINE_VCMAP=1",
                 "-DBUILD_JSON_CONFIG=1",
                 "-DCXX_STANDARD=20",
                 "-DBUILD_TESTS=OFF",
@@ -72,14 +82,19 @@ def test_json():
         },
     }
 
+    test_path = os.getenv("TEST_PATH", "/dev/shm/pmemkv")
+    # for volatile engines we specify only directory
+    if is_volatile:
+        test_path = test_path[: test_path.rfind("/")]
+
     benchmark_configuration = [
         {
             "env": {"PMEM_IS_PMEM_FORCE": "1"},
             "params": {
-                "--db": os.getenv("TEST_PATH", "/dev/shm/pmemkv"),
+                "--db": test_path,
                 "--db_size_in_gb": "1",
-                "--benchmarks": "fillrandom",
-                "--engine": "cmap",
+                "--benchmarks": benchmarks,
+                "--engine": engine,
                 "--num": "100",
                 "--value_size": "8",
                 "--threads": "2",
