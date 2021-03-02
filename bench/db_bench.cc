@@ -18,6 +18,7 @@
 #include <memory>
 #include <string>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <vector>
 
 #include "csv.h"
@@ -537,7 +538,7 @@ private:
 	}
 
 public:
-	Benchmark(Slice name, pmem::kv::db *kv, int num_threads, const char *engine, BenchmarkLogger &logger)
+	Benchmark(Slice name, pmem::kv::db *&kv, int num_threads, const char *engine, BenchmarkLogger &logger)
 	    : kv_(kv), num_(FLAGS_num), tx_size_(FLAGS_tx_size), value_size_(FLAGS_value_size),
 	      key_size_(FLAGS_key_size), reads_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
 	      readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads), logger(logger), n(num_threads),
@@ -579,12 +580,15 @@ public:
 		logger.insert("Benchmark", name.ToString());
 		PrintHeader();
 
-		Open(fresh_db, name.ToString());
-	}
-
-	~Benchmark()
-	{
-		kv_->close();
+		if (fresh_db) {
+			if (kv_ != nullptr) {
+				kv_->close();
+				delete kv_;
+				kv_ = nullptr;
+			}
+			Create(name.ToString());
+			kv = kv_;
+		}
 	}
 
 	Slice AllocateKey(std::unique_ptr<const char[]> &key_guard)
@@ -733,32 +737,32 @@ private:
 		}
 	}
 
-	void Open(bool fresh_db, std::string name)
+	void Create(std::string name)
 	{
-		assert(kv_ == NULL);
+		assert(kv_ == nullptr);
 		auto start = g_env->NowMicros();
 		auto size = 1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb;
 		pmem::kv::config cfg;
 
 		auto cfg_s = cfg.put_string("path", FLAGS_db);
-
 		if (cfg_s != pmem::kv::status::OK)
 			throw std::runtime_error("putting 'path' to config failed");
 
-		if (fresh_db) {
-			cfg_s = cfg.put_uint64("force_create", 1);
-			if (cfg_s != pmem::kv::status::OK)
-				throw std::runtime_error("putting 'force_create' to config failed");
+		cfg_s = cfg.put_uint64("force_create", 1);
+		if (cfg_s != pmem::kv::status::OK)
+			throw std::runtime_error("putting 'force_create' to config failed");
 
-			cfg_s = cfg.put_uint64("size", size);
+		cfg_s = cfg.put_uint64("size", size);
+		if (cfg_s != pmem::kv::status::OK)
+			throw std::runtime_error("putting 'size' to config failed");
 
-			if (cfg_s != pmem::kv::status::OK)
-				throw std::runtime_error("putting 'size' to config failed");
-
-			if (kv_ != NULL) {
-				delete kv_;
-				kv_ = NULL;
-			}
+		/* Check if the path is a directory or a file
+		 * (we don't pass filename in case of memkind
+		 * based engines, only dir). If it is a file,
+		 * remove the previous file with the same name. */
+		struct stat info;
+		if (stat(FLAGS_db, &info) == 0 && !(info.st_mode & S_IFDIR))
+		{
 			auto start = g_env->NowMicros();
 			/* Remove pool file. This should be
 			 * implemented using libpmempool for backward
@@ -1097,6 +1101,7 @@ int main(int argc, char **argv)
 		}
 	}
 	if (kv != NULL) {
+		kv->close();
 		delete kv;
 	}
 	logger.print();
