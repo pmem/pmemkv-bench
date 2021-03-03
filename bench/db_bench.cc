@@ -12,10 +12,12 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <inttypes.h>
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -210,10 +212,18 @@ public:
 		}
 		csv.insert(id, "Median [micros/op]", histogram.Median());
 	}
+
 	template <typename T>
 	void insert(std::string column, T data)
 	{
 		csv.insert(id, column, data);
+	}
+
+	void insert(std::string column, std::time_t time)
+	{
+		std::ostringstream time_stream;
+		time_stream << std::put_time(std::localtime(&time), "%D %T");
+		insert(column, time_stream.str());
 	}
 
 	void print_histogram()
@@ -505,9 +515,8 @@ private:
 	void PrintEnvironment()
 	{
 #if defined(__linux)
-		time_t now = time(NULL);
-		auto formatted_time = std::string(ctime(&now));
-		logger.insert("Date:", formatted_time.erase(formatted_time.find_last_of("\n")));
+		auto now = std::time(NULL);
+		logger.insert("Date:", now);
 
 		FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
 		if (cpuinfo != NULL) {
