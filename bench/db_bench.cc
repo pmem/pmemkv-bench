@@ -19,8 +19,8 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 #include "csv.h"
@@ -770,8 +770,7 @@ private:
 		 * based engines, only dir). If it is a file,
 		 * remove the previous file with the same name. */
 		struct stat info;
-		if (stat(FLAGS_db, &info) == 0 && !(info.st_mode & S_IFDIR))
-		{
+		if (stat(FLAGS_db, &info) == 0 && !(info.st_mode & S_IFDIR)) {
 			auto start = g_env->NowMicros();
 			/* Remove pool file. This should be
 			 * implemented using libpmempool for backward
