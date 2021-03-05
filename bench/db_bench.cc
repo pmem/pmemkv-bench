@@ -41,7 +41,8 @@ static const std::string USAGE =
 	"--db_size_in_gb=<integer>  (size of persistent pool to create in GB, default: 0)\n"
 	"                           (note: for existing poolset or device DAX configs use 0 or leave default value)\n"
 	"                           (note: when pool path is non-existing, value should be > 0)\n"
-	"--histogram=<0|1>          (show histograms when reporting latencies)\n"
+	"--histogram=<0|1>          (enables histogram's reporting latencies, it may slow down measurements, default: 0)\n"
+	"--print_histogram=<0|1>    (prints histogram if enabled, default: 1)\n"
 	"--num=<integer>            (number of keys to place in database, default: 1000000)\n"
 	"--reads=<integer>          (number of read operations, default: 1000000)\n"
 	"--threads=<integer>        (number of concurrent threads, default: 1)\n"
@@ -89,6 +90,9 @@ static int FLAGS_value_size = 100;
 
 // Print histogram of operation timings
 static bool FLAGS_histogram = false;
+
+// Print histogram of operation timings
+static bool FLAGS_print_histogram = true;
 
 // Use the db with the following name.
 static const char *FLAGS_db = "/dev/shm/pmemkv";
@@ -1056,6 +1060,8 @@ int main(int argc, char **argv)
 			FLAGS_engine = argv[i] + 9;
 		} else if (sscanf(argv[i], "--histogram=%d%c", &n, &junk) == 1 && (n == 0 || n == 1)) {
 			FLAGS_histogram = n;
+		} else if (sscanf(argv[i], "--print_histogram=%d%c", &n, &junk) == 1 && (n == 0 || n == 1)) {
+			FLAGS_print_histogram = n;
 		} else if (sscanf(argv[i], "--num=%d%c", &n, &junk) == 1) {
 			FLAGS_num = n;
 		} else if (sscanf(argv[i], "--reads=%d%c", &n, &junk) == 1) {
@@ -1113,7 +1119,7 @@ int main(int argc, char **argv)
 		delete kv;
 	}
 	logger.print();
-	if (FLAGS_histogram) {
+	if (FLAGS_histogram && FLAGS_print_histogram) {
 		logger.print_histogram();
 	}
 	return return_value;
