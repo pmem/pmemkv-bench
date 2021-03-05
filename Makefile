@@ -5,7 +5,7 @@
 
 bench: CFLAGS = $(shell pkg-config --cflags libpmemkv libpmempool) -DOS_LINUX -fno-builtin-memcmp -march=native -DNDEBUG -O2 -std=c++11
 bench: LDFLAGS = -ldl -lpthread $(shell pkg-config --libs libpmemkv libpmempool)
-CPP_FILES = $(shell find . -iname "*.h" -o -iname "*.cc"  -o -iname "*.cpp" -o -iname "*.hpp")
+CPP_FILES = $(shell find . -iname "*.h" -o -iname "*.cc" -o -iname "*.cpp" -o -iname "*.hpp")
 PYTHON_FILES = $(shell find . -iname "*.py")
 
 
@@ -28,7 +28,17 @@ cppformat: $(CPP_FILES)
 $(CPP_FILES):
 	clang-format-11 -i $@
 
+check-cppformat:
+	@for src in $(CPP_FILES) ; do \
+		clang-format-11 --verbose --Werror -n "$$src"
+	done
+
 pyformat: $(PYTHON_FILES)
 
 $(PYTHON_FILES):
 	python3 -m black $@
+
+check-pyformat:
+	@for src in $(PYTHON_FILES) ; do \
+		python3 -m black "$$src" --check
+	done
