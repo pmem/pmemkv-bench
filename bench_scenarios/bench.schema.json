@@ -16,6 +16,7 @@
                     "required": [
                         "--benchmarks",
                         "--value_size",
+                        "--key_size",
                         "--threads",
                         "--engine",
                         "--num",

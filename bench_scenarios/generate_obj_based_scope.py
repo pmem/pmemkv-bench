@@ -55,6 +55,7 @@ def generate():
             "params": {
                 "--benchmarks": f"{benchmark[0]}",
                 "--value_size": f"{benchmark[1]}",
+                "--key_size": f"{benchmark[1]}",
                 "--threads": f"{benchmark[2]}",
                 "--engine": f"{benchmark[3]}",
                 "--num": f"{number_of_elements}",
