@@ -14,6 +14,7 @@ We always try to improve this benchmark and keep it up-to-date with libpmemkv.
 Please don't fully rely on API and the results produced by this tool.
 If you have any questions, improvement ideas or you found a bug,
 please file a report in the [issues tab](https://github.com/pmem/pmemkv-bench/issues).
+Contributions are also welcome - take a look at our [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Note:**
 >The `pmemkv-bench` may clear pool passed in `--db` parameter, so pool, poolset or DAX
