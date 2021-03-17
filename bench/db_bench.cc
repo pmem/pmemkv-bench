@@ -317,16 +317,10 @@ public:
 
 	void FinishedSingleOp()
 	{
-		if (FLAGS_histogram) {
-			double now = g_env->NowMicros();
-			double micros = now - last_op_finish_;
-			hist_.Add(micros);
-			if (micros > 20000) {
-				fprintf(stderr, "long op: %.1f micros%30s\r", micros, "");
-				fflush(stderr);
-			}
-			last_op_finish_ = now;
-		}
+		double now = g_env->NowMicros();
+		double micros = now - last_op_finish_;
+		hist_.Add(micros);
+		last_op_finish_ = now;
 
 		done_++;
 		if (done_ >= next_report_) {
@@ -659,9 +653,7 @@ public:
 		logger.insert("ops/sec", thread_stats.get_ops_per_sec());
 		logger.insert("throughput [MB/s]", thread_stats.get_throughput());
 		logger.insert("extra_data", thread_stats.get_extra_data());
-		if (FLAGS_histogram) {
-			logger.insert(name.ToString(), thread_stats.get_histogram());
-		}
+		logger.insert(name.ToString(), thread_stats.get_histogram());
 		for (int i = 0; i < n; i++) {
 			delete arg[i].thread;
 		}
