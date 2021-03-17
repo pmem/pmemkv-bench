@@ -344,8 +344,6 @@ public:
 				next_report_ += 50000;
 			else
 				next_report_ += 100000;
-			fprintf(stderr, "... finished %d ops%30s\r", done_, "");
-			fflush(stderr);
 		}
 	}
 
