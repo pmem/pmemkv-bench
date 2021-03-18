@@ -19,8 +19,8 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 #include "csv.h"
@@ -317,16 +317,10 @@ public:
 
 	void FinishedSingleOp()
 	{
-		if (FLAGS_histogram) {
-			double now = g_env->NowMicros();
-			double micros = now - last_op_finish_;
-			hist_.Add(micros);
-			if (micros > 20000) {
-				fprintf(stderr, "long op: %.1f micros%30s\r", micros, "");
-				fflush(stderr);
-			}
-			last_op_finish_ = now;
-		}
+		double now = g_env->NowMicros();
+		double micros = now - last_op_finish_;
+		hist_.Add(micros);
+		last_op_finish_ = now;
 
 		done_++;
 		if (done_ >= next_report_) {
@@ -344,8 +338,6 @@ public:
 				next_report_ += 50000;
 			else
 				next_report_ += 100000;
-			fprintf(stderr, "... finished %d ops%30s\r", done_, "");
-			fflush(stderr);
 		}
 	}
 
@@ -661,9 +653,7 @@ public:
 		logger.insert("ops/sec", thread_stats.get_ops_per_sec());
 		logger.insert("throughput [MB/s]", thread_stats.get_throughput());
 		logger.insert("extra_data", thread_stats.get_extra_data());
-		if (FLAGS_histogram) {
-			logger.insert(name.ToString(), thread_stats.get_histogram());
-		}
+		logger.insert(name.ToString(), thread_stats.get_histogram());
 		for (int i = 0; i < n; i++) {
 			delete arg[i].thread;
 		}
@@ -770,8 +760,7 @@ private:
 		 * based engines, only dir). If it is a file,
 		 * remove the previous file with the same name. */
 		struct stat info;
-		if (stat(FLAGS_db, &info) == 0 && !(info.st_mode & S_IFDIR))
-		{
+		if (stat(FLAGS_db, &info) == 0 && !(info.st_mode & S_IFDIR)) {
 			auto start = g_env->NowMicros();
 			/* Remove pool file. This should be
 			 * implemented using libpmempool for backward
