@@ -45,7 +45,7 @@ static const std::string USAGE =
 	"--num=<integer>            (number of keys to place in database, default: 1000000)\n"
 	"--reads=<integer>          (number of read operations, default: 1000000)\n"
 	"--threads=<integer>        (number of concurrent threads, default: 1)\n"
-	"--key_size=<integer>       (size of keys in bytes, default: 16)\n"
+	"--key_size=<integer>       (size of keys in bytes, default: 8)\n"
 	"--value_size=<integer>     (size of values in bytes, default: 100)\n"
 	"--readwritepercent=<integer> (Ratio of reads to reads/writes (expressed "
 	"as percentage) for the ReadRandomWriteRandom workload. The default value "
@@ -82,7 +82,7 @@ static int FLAGS_reads = -1;
 // Number of concurrent threads to run.
 static int FLAGS_threads = 1;
 
-static int FLAGS_key_size = 16;
+static int FLAGS_key_size = 8;
 
 // Size of each value
 static int FLAGS_value_size = 100;
