@@ -27,7 +27,7 @@
             },
             "required": [
                 "env",
-                "params"
+                "pmemkv_bench"
             ]
         }
     ]
