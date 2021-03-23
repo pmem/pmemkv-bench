@@ -12,6 +12,7 @@ tests_path = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.dirname(tests_path)
 sys.path.append(project_path)
 import run_benchmark as rb
+import jsonschema
 
 build_configuration = {
     "db_bench": {
@@ -167,3 +168,22 @@ def test_json(engine, test_path, benchmarks):
     ]
 
     execute_run_benchmark(build_configuration, benchmark_configuration)
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "generate_obj_based_scope.py",
+        "generate_dram_scope.py",
+        "generate_memkind_based_scope.py",
+    ],
+)
+def test_scenario(scenario):
+    scenario_path = os.path.join(project_path, "bench_scenarios", scenario)
+    schema_path = os.path.join(project_path, "bench_scenarios", "bench.schema.json")
+
+    output = rb.load_scenarios(scenario_path)
+    schema = None
+    with open(schema_path, "r") as schema_file:
+        schema = json.loads(schema_file.read())
+    jsonschema.validate(instance=output, schema=schema)
