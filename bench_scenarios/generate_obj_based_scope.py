@@ -56,7 +56,7 @@ def generate():
             "env": {
                 "NUMACTL_CPUBIND": f"file:{os.path.dirname(db_path)}",
             },
-            "params": {
+            "pmemkv_bench": {
                 "--benchmarks": f"{benchmark[0]}",
                 "--key_size": f"{benchmark[1]}",
                 "--value_size": f"{benchmark[2]}",
@@ -65,6 +65,9 @@ def generate():
                 "--num": f"{number_of_elements}",
                 "--db": db_path,
                 "--db_size_in_gb": "200",
+            },
+            "numactl": {
+                "--cpubind": f"file:{os.path.dirname(db_path)}",
             },
         }
 

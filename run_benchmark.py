@@ -24,6 +24,28 @@ sys.excepthook = lambda ex_type, ex, traceback: logger.error(
 )
 
 
+class CmdLine:
+    def __init__(self):
+        self.cmdline = []
+
+    def append(self, app, params: dict):
+        params_list = []
+        for key in params:
+            print(f"{key=}")
+            if params[key] == "":
+                params_list.append(key)
+            else:
+                params_list.append(f"{key}={params[key]}")
+        print(f"{params_list=}")
+        self.cmdline.extend([app] + params_list)
+
+    def __str__(self):
+        return " ".join(self)
+
+    def __getitem__(self, item):
+        return self.cmdline[item]
+
+
 class Repository:
     def __init__(self, config: dict):
         self.logger = logging.getLogger(type(self).__name__)
@@ -136,7 +158,7 @@ class DB_bench:
             self.logger.error(f"Cannot build benchmark: {e}")
             raise e
 
-    def run(self, environ, benchmark_params):
+    def run(self, environ, benchmark_params, numactl=None):
         find_file_path = lambda root_dir, filename: ":".join(
             set(
                 os.path.dirname(x)
@@ -149,15 +171,12 @@ class DB_bench:
         env["PATH"] = self.path + ":" + os.environ["PATH"]
         env["LD_LIBRARY_PATH"] = find_file_path(self.pmemkv.install_path, "*.so.*")
         self.logger.debug(f"{env=}")
-        params_list = [f"{key}={benchmark_params[key]}" for key in benchmark_params]
-
-        numa_settings = []
-        if "NUMACTL_CPUBIND" in env:
-            cpubind = env["NUMACTL_CPUBIND"]
-            numa_settings = ["numactl", f"--cpubind={cpubind}"]
-
-        cmd = numa_settings + ["pmemkv_bench"] + params_list
+        cmd = CmdLine()
+        if numactl:
+            cmd.append("numactl", numactl)
+        cmd.append("pmemkv_bench", benchmark_params)
         logger.info(cmd)
+
         try:
             self.run_output = subprocess.run(
                 cmd,
@@ -327,8 +346,8 @@ This parameter sets configuration of benchmarking process. Input structure is sp
     benchmark.build()
     for test_case in bench_params:
         logger.info(f"Running: {test_case}")
-        benchmark.run(test_case["env"], test_case["params"])
-        benchmark.cleanup(test_case["params"])
+        benchmark.run(test_case["env"], test_case["pmemkv_bench"], test_case.get("numactl"))
+        benchmark.cleanup(test_case["pmemkv_bench"])
         benchmark_results = benchmark.get_results()
 
         report = {}
