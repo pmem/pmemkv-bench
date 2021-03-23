@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021, Intel Corporation
 
-# This script implements generate() method, which may be invoked by run_benchmark.py directly,
+# This script implements generate() method, which may be invoked by run_benchmark.py directly
 # or used as standalone application, which prints configuration json (also validated against schema)
-# to stdout. Such once generated json may be saved and passed to run_benchmark.py as a parameter
+# to stdout. Such once generated json may be saved and passed to run_benchmark.py as a parameter.
 
 import json
 import itertools
@@ -22,23 +22,27 @@ benchmarks = [
     "fillseq,readwhilewriting",
     "fillseq,readrandomwriterandom",
 ]
-size = [8, 128]
+key_size = [8]
+value_size = [8, 128]
 number_of_elements = 100000000
 
 
 def concurrent_engines():
-
     number_of_threads = [1, 4, 8, 12, 18, 24]
     engine = ["cmap", "csmap"]
 
-    result = itertools.product(benchmarks, size, number_of_threads, engine)
+    result = itertools.product(
+        benchmarks, key_size, value_size, number_of_threads, engine
+    )
     return list(result)
 
 
 def single_threaded_engines():
     number_of_threads = [1]
     engine = ["radix", "stree"]
-    result = itertools.product(benchmarks, size, number_of_threads, engine)
+    result = itertools.product(
+        benchmarks, key_size, value_size, number_of_threads, engine
+    )
     return list(result)
 
 
@@ -54,9 +58,10 @@ def generate():
             },
             "params": {
                 "--benchmarks": f"{benchmark[0]}",
-                "--value_size": f"{benchmark[1]}",
-                "--threads": f"{benchmark[2]}",
-                "--engine": f"{benchmark[3]}",
+                "--key_size": f"{benchmark[1]}",
+                "--value_size": f"{benchmark[2]}",
+                "--threads": f"{benchmark[3]}",
+                "--engine": f"{benchmark[4]}",
                 "--num": f"{number_of_elements}",
                 "--db": db_path,
                 "--db_size_in_gb": "200",

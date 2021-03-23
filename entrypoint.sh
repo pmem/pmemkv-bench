@@ -9,7 +9,12 @@ set -x
 echo "$1"
 
 project_dir=${WORKDIR:-/pmemkv-bench}
+cd ${project_dir}
+
+echo "run checkers"
+make check-cppformat
+make check-pyformat
 
 echo "run basic test"
-pytest-3 -v ${project_dir}/tests/test.py
+pytest-3 -v ./tests/test.py
 
