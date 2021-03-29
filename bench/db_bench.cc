@@ -545,7 +545,7 @@ public:
 	      readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads), logger(logger), n(num_threads),
 	      name(name), engine(engine)
 	{
-		fprintf(stderr, "running %s \n", name.ToString().c_str());
+		fprintf(stderr, "Running %s\n", name.ToString().c_str());
 		bool fresh_db = false;
 
 		if (name == Slice("fillseq")) {
@@ -766,7 +766,7 @@ private:
 			 * implemented using libpmempool for backward
 			 * compatibility. */
 			if (pmempool_rm(FLAGS_db, PMEMPOOL_RM_FORCE) != 0) {
-				throw std::runtime_error(std::string("Cannot remove pool: ") + FLAGS_db);
+				throw std::runtime_error("Cannot remove pool: " + std::string(FLAGS_db));
 			}
 			logger.insert("Remove [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
 		}
@@ -776,9 +776,8 @@ private:
 
 		if (s != pmem::kv::status::OK) {
 			fprintf(stderr,
-				"Cannot start engine (%s) for path (%s) with %i GB capacity\n%s\n\nUSAGE: %s",
-				engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str(),
-				USAGE.c_str());
+				"Cannot start engine (%s) for path (%s) with %i GB capacity\nError: %s",
+				engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str());
 			exit(-42);
 		}
 		logger.insert("Open [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
@@ -813,15 +812,19 @@ private:
 				s = inserter.put(key.ToString(), value);
 				bytes += value_size_ + key.size();
 				if (s != pmem::kv::status::OK) {
-					fprintf(stdout, "Out of space at key %i\n", i);
-					exit(1);
+					throw std::runtime_error(
+						"Put error for " + std::to_string(i) + "-th key: '" +
+						std::string(key.ToString().c_str()) +
+						"' (pmemkv status: " + std::to_string(int(s)) + ", error: " +
+						std::string(pmem::kv::errormsg().c_str()) + ")");
 				}
 			}
 			s = inserter.commit();
 			thread->stats.FinishedSingleOp();
 			if (s != pmem::kv::status::OK) {
-				fprintf(stdout, "Commit failed at batch %i\n", n);
-				exit(1);
+				throw std::runtime_error(
+					"Commit failed at batch " + std::to_string(n / batch_size) +
+					"\nError: " + std::string(pmem::kv::errormsg().c_str()));
 			}
 		}
 		thread->stats.AddBytes(bytes);
@@ -931,14 +934,15 @@ private:
 			if (write_merge == kWrite) {
 				s = kv_->put(key.ToString(), gen.Generate(value_size_).ToString());
 			} else {
-				fprintf(stderr, "Merge operation not supported\n");
-				exit(1);
+				throw std::runtime_error("Merge operation not supported");
 			}
 			written++;
 
 			if (s != pmem::kv::status::OK) {
-				fprintf(stderr, "Put error\n");
-				exit(1);
+				throw std::runtime_error(
+					"Put error for key '" + std::string(key.ToString().c_str()) +
+					"' (pmemkv status: " + std::to_string(int(s)) +
+					", error: " + std::string(pmem::kv::errormsg().c_str()) + ")");
 			}
 			bytes += key.size() + value_size_;
 		}
@@ -983,7 +987,8 @@ private:
 				if (s == pmem::kv::status::OK) {
 					found++;
 				} else if (s != pmem::kv::status::NOT_FOUND) {
-					fprintf(stderr, "get error\n");
+					fprintf(stderr, "Get error for key '%s' (%s)\n",
+						key.ToString().c_str(), pmem::kv::errormsg().c_str());
 				}
 
 				bytes += value.length() + key.size();
@@ -996,8 +1001,10 @@ private:
 				pmem::kv::status s =
 					kv_->put(key.ToString(), gen.Generate(value_size_).ToString());
 				if (s != pmem::kv::status::OK) {
-					fprintf(stderr, "put error\n");
-					exit(1);
+					throw std::runtime_error(
+						"Put error for key '" + std::string(key.ToString().c_str()) +
+						"' (pmemkv status: " + std::to_string(int(s)) + ", error: " +
+						std::string(pmem::kv::errormsg().c_str()) + ")");
 				}
 				bytes += key.size() + value_size_;
 				put_weight--;
