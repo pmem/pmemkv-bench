@@ -545,7 +545,7 @@ public:
 	      readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads), logger(logger), n(num_threads),
 	      name(name), engine(engine)
 	{
-		fprintf(stderr, "running %s \n", name.ToString().c_str());
+		fprintf(stderr, "Running %s\n", name.ToString().c_str());
 		bool fresh_db = false;
 
 		if (name == Slice("fillseq")) {
@@ -736,6 +736,26 @@ private:
 		}
 	}
 
+	/* Throw exception for failed put (with proper message) */
+	void throw_put_error(int i, leveldb::Slice key, pmem::kv::status s) {
+		std::string prnt_key = key.ToString();
+		std::ostringstream err_msg;
+		err_msg << "Put error for " << std::to_string(i) << "-th key: ";
+
+		/* key is a binary data, print also non-printable chars */
+		for (int c = 0; c < prnt_key.size(); c++) {
+			if (!isprint(prnt_key[c])) {
+				err_msg << "'0x" << std::hex << int(prnt_key[c]) << "'";
+			} else {
+				err_msg << "'" << prnt_key[c] << "'";
+			}
+		}
+
+		err_msg << " (pmemkv status: " << std::to_string(int(s))
+			<< ", error: '" << pmem::kv::errormsg() << "')";
+		throw std::runtime_error(err_msg.str());
+	}
+
 	void Create(std::string name)
 	{
 		assert(kv_ == nullptr);
@@ -766,7 +786,7 @@ private:
 			 * implemented using libpmempool for backward
 			 * compatibility. */
 			if (pmempool_rm(FLAGS_db, PMEMPOOL_RM_FORCE) != 0) {
-				throw std::runtime_error(std::string("Cannot remove pool: ") + FLAGS_db);
+				throw std::runtime_error("Cannot remove pool: " + std::string(FLAGS_db));
 			}
 			logger.insert("Remove [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
 		}
@@ -775,11 +795,10 @@ private:
 		auto s = kv_->open(engine, std::move(cfg));
 
 		if (s != pmem::kv::status::OK) {
-			fprintf(stderr,
-				"Cannot start engine (%s) for path (%s) with %i GB capacity\n%s\n\nUSAGE: %s",
-				engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str(),
-				USAGE.c_str());
-			exit(-42);
+			throw std::runtime_error("Cannot start engine '" + std::string(engine) +
+						 "' for path '" + FLAGS_db + "' with " +
+						 std::to_string(FLAGS_db_size_in_gb) +
+						 " GB capacity.\nError '" + pmem::kv::errormsg() + "'");
 		}
 		logger.insert("Open [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
 	}
@@ -813,15 +832,15 @@ private:
 				s = inserter.put(key.ToString(), value);
 				bytes += value_size_ + key.size();
 				if (s != pmem::kv::status::OK) {
-					fprintf(stdout, "Out of space at key %i\n", i);
-					exit(1);
+					throw_put_error(i, key, s);
 				}
 			}
 			s = inserter.commit();
 			thread->stats.FinishedSingleOp();
 			if (s != pmem::kv::status::OK) {
-				fprintf(stdout, "Commit failed at batch %i\n", n);
-				exit(1);
+				throw std::runtime_error("Commit failed at batch " +
+							 std::to_string(n / batch_size) +
+							 "\nError '" + pmem::kv::errormsg() + "'");
 			}
 		}
 		thread->stats.AddBytes(bytes);
@@ -930,16 +949,13 @@ private:
 
 			if (write_merge == kWrite) {
 				s = kv_->put(key.ToString(), gen.Generate(value_size_).ToString());
+				if (s != pmem::kv::status::OK) {
+					throw_put_error(written, key, s);
+				}
 			} else {
-				fprintf(stderr, "Merge operation not supported\n");
-				exit(1);
+				throw std::runtime_error("Merge operation not supported");
 			}
 			written++;
-
-			if (s != pmem::kv::status::OK) {
-				fprintf(stderr, "Put error\n");
-				exit(1);
-			}
 			bytes += key.size() + value_size_;
 		}
 		thread->stats.AddBytes(bytes);
@@ -983,7 +999,8 @@ private:
 				if (s == pmem::kv::status::OK) {
 					found++;
 				} else if (s != pmem::kv::status::NOT_FOUND) {
-					fprintf(stderr, "get error\n");
+					fprintf(stderr, "Get error for key '%s' (error: '%s')\n",
+						key.ToString().c_str(), pmem::kv::errormsg().c_str());
 				}
 
 				bytes += value.length() + key.size();
@@ -996,8 +1013,7 @@ private:
 				pmem::kv::status s =
 					kv_->put(key.ToString(), gen.Generate(value_size_).ToString());
 				if (s != pmem::kv::status::OK) {
-					fprintf(stderr, "put error\n");
-					exit(1);
+					throw_put_error(writes_done, key, s);
 				}
 				bytes += key.size() + value_size_;
 				put_weight--;
