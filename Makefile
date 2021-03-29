@@ -7,21 +7,24 @@ bench: CFLAGS = $(shell pkg-config --cflags libpmemkv libpmempool) -DOS_LINUX -f
 bench: LDFLAGS = -ldl -lpthread $(shell pkg-config --libs libpmemkv libpmempool)
 CPP_FILES = $(shell find . -iname "*.h" -o -iname "*.cc" -o -iname "*.cpp" -o -iname "*.hpp")
 PYTHON_FILES = $(shell find . -iname "*.py")
+KV_BENCH_TEST_PATH ?= /dev/shm/pmemkv
 
 
 .PHONY: cppformat $(CPP_FILES) pythonformat $(PYTHON_FILES)
 
 bench: reset
-	g++ ./bench/db_bench.cc ./bench/port/port_posix.cc ./bench/util/env.cc ./bench/util/env_posix.cc ./bench/util/histogram.cc ./bench/util/logging.cc ./bench/util/status.cc ./bench/util/testutil.cc -o pmemkv_bench -I./bench/include -I./bench -I./bench/util $(CFLAGS) $(LDFLAGS)
+	g++ ./bench/db_bench.cc ./bench/port/port_posix.cc ./bench/util/env.cc ./bench/util/env_posix.cc \
+		./bench/util/histogram.cc ./bench/util/logging.cc ./bench/util/status.cc ./bench/util/testutil.cc \
+		-o pmemkv_bench -I./bench/include -I./bench -I./bench/util $(CFLAGS) $(LDFLAGS)
 
 reset:
-	rm -rf /dev/shm/pmemkv /tmp/pmemkv
+	rm -rf $(KV_BENCH_TEST_PATH)
 
 clean: reset
 	rm -rf pmemkv_bench
 
 run_bench: bench
-	PMEM_IS_PMEM_FORCE=1 ./pmemkv_bench --db=/dev/shm/pmemkv --db_size_in_gb=1 --histogram=1
+	PMEM_IS_PMEM_FORCE=1 ./pmemkv_bench --db=$(KV_BENCH_TEST_PATH) --db_size_in_gb=1 --histogram=1
 
 cppformat: $(CPP_FILES)
 
