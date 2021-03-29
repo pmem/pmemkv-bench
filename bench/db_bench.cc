@@ -545,7 +545,7 @@ public:
 	      readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads), logger(logger), n(num_threads),
 	      name(name), engine(engine)
 	{
-		fprintf(stderr, "running %s \n", name.ToString().c_str());
+		fprintf(stderr, "Running %s\n", name.ToString().c_str());
 		bool fresh_db = false;
 
 		if (name == Slice("fillseq")) {
@@ -776,7 +776,7 @@ private:
 
 		if (s != pmem::kv::status::OK) {
 			fprintf(stderr,
-				"Cannot start engine (%s) for path (%s) with %i GB capacity\n%s",
+				"Cannot start engine (%s) for path (%s) with %i GB capacity\nError: %s",
 				engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str());
 			exit(-42);
 		}
@@ -812,14 +812,16 @@ private:
 				s = inserter.put(key.ToString(), value);
 				bytes += value_size_ + key.size();
 				if (s != pmem::kv::status::OK) {
-					fprintf(stdout, "Out of space at key %i\n", i);
+					fprintf(stderr, "Put error for key: %d (pmemkv status: %d)\n", i,
+						int(s));
 					exit(1);
 				}
 			}
 			s = inserter.commit();
 			thread->stats.FinishedSingleOp();
 			if (s != pmem::kv::status::OK) {
-				fprintf(stdout, "Commit failed at batch %i\n", n);
+				fprintf(stderr, "Commit failed at batch %i\nError: %s\n", n / batch_size,
+					pmem::kv::errormsg().c_str());
 				exit(1);
 			}
 		}
@@ -936,7 +938,8 @@ private:
 			written++;
 
 			if (s != pmem::kv::status::OK) {
-				fprintf(stderr, "Put error\n");
+				fprintf(stderr, "Put error for key '%s' (%s)\n", key.ToString().c_str(),
+					pmem::kv::errormsg().c_str());
 				exit(1);
 			}
 			bytes += key.size() + value_size_;
@@ -982,7 +985,8 @@ private:
 				if (s == pmem::kv::status::OK) {
 					found++;
 				} else if (s != pmem::kv::status::NOT_FOUND) {
-					fprintf(stderr, "get error\n");
+					fprintf(stderr, "Get error for key '%s' (%s)\n",
+						key.ToString().c_str(), pmem::kv::errormsg().c_str());
 				}
 
 				bytes += value.length() + key.size();
@@ -995,7 +999,8 @@ private:
 				pmem::kv::status s =
 					kv_->put(key.ToString(), gen.Generate(value_size_).ToString());
 				if (s != pmem::kv::status::OK) {
-					fprintf(stderr, "put error\n");
+					fprintf(stderr, "Put error for key '%s' (%s)\n",
+						key.ToString().c_str(), pmem::kv::errormsg().c_str());
 					exit(1);
 				}
 				bytes += key.size() + value_size_;
