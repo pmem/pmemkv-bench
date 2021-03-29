@@ -7,7 +7,7 @@
 // (found in the LICENSE file in the root directory).
 
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2017-2021, Intel Corporation
+/* Copyright 2017-2021, Intel Corporation */
 
 #include <chrono>
 #include <cstdio>
@@ -71,29 +71,29 @@ static const std::string USAGE =
 	"    readrandomwriterandom  (N threads doing random-read, random-write)\n"
 	"    txfillrandom           (load N values in random key order transactionally)\n";
 
-// Number of key/values to place in database
+/* Number of key/values to place in database */
 static int FLAGS_num = 1000000;
 
 static bool FLAGS_disjoint = false;
 
-// Number of read operations to do.  If negative, do FLAGS_num reads.
+/* Number of read operations to do. If negative, do FLAGS_num reads. */
 static int FLAGS_reads = -1;
 
-// Number of concurrent threads to run.
+/* Number of concurrent threads to run. */
 static int FLAGS_threads = 1;
 
 static int FLAGS_key_size = 8;
 
-// Size of each value
+/* Size of each value */
 static int FLAGS_value_size = 100;
 
-// Print histogram of operation timings
+/* Print histogram of operation timings */
 static bool FLAGS_histogram = false;
 
-// Use the db with the following name.
+/* Use the db with the following name. */
 static const char *FLAGS_db = "/dev/shm/pmemkv";
 
-// Use following size when opening the database.
+/* Use following size when opening the database. */
 static int FLAGS_db_size_in_gb = 0;
 
 static const double FLAGS_compression_ratio = 1.0;
@@ -127,7 +127,7 @@ static Slice TrimSpace(Slice s)
 
 #endif
 
-// Helper for quickly generating random data.
+/* Helper for quickly generating random data. */
 class RandomGenerator {
 private:
 	std::string data_;
@@ -136,14 +136,14 @@ private:
 public:
 	RandomGenerator()
 	{
-		// We use a limited amount of data over and over again and ensure
-		// that it is larger than the compression window (32KB), and also
-		// large enough to serve all typical value sizes we want to write.
+		/* We use a limited amount of data over and over again and ensure
+		 * that it is larger than the compression window (32KB), and also
+		 * large enough to serve all typical value sizes we want to write. */
 		Random rnd(301);
 		std::string piece;
 		while (data_.size() < (unsigned)std::max(1048576, FLAGS_value_size)) {
-			// Add a short fragment that is as compressible as specified
-			// by FLAGS_compression_ratio.
+			/* Add a short fragment that is as compressible as specified
+			 * by FLAGS_compression_ratio. */
 			test::CompressibleString(&rnd, FLAGS_compression_ratio, 100, &piece);
 			data_.append(piece);
 		}
@@ -276,7 +276,7 @@ public:
 		start_ = g_env->NowMicros();
 		finish_ = start_;
 		message_.clear();
-		// When set, stats from this thread won't be merged with others.
+		/* When set, stats from this thread won't be merged with others */
 		exclude_from_merge_ = false;
 	}
 
@@ -294,7 +294,7 @@ public:
 		if (other.finish_ > finish_)
 			finish_ = other.finish_;
 
-		// Just keep the messages from one thread
+		/* Just keep the messages from one thread */
 		if (message_.empty())
 			message_ = other.message_;
 	}
@@ -348,8 +348,8 @@ public:
 
 	float get_micros_per_op()
 	{
-		// Pretend at least one op was done in case we are running a benchmark
-		// that does not call FinishedSingleOp().
+		/* Pretend at least one op was done in case we are running a benchmark
+		 * that does not call FinishedSingleOp(). */
 		if (done_ < 1)
 			done_ = 1;
 		return seconds_ * 1e6 / done_;
@@ -357,8 +357,8 @@ public:
 
 	float get_ops_per_sec()
 	{
-		// Pretend at least one op was done in case we are running a benchmark
-		// that does not call FinishedSingleOp().
+		/* Pretend at least one op was done in case we are running a benchmark
+		 * that does not call FinishedSingleOp(). */
 		if (done_ < 1)
 			done_ = 1;
 		double elapsed = (finish_ - start_) * 1e-6;
@@ -368,8 +368,8 @@ public:
 
 	float get_throughput()
 	{
-		// Rate and ops/sec is computed on actual elapsed time, not the sum of per-thread
-		// elapsed times.
+		/* Rate and ops/sec is computed on actual elapsed time, not the sum of per-thread
+		 * elapsed times. */
 		double elapsed = (finish_ - start_) * 1e-6;
 		return (bytes_ / 1048576.0) / elapsed;
 	}
@@ -385,17 +385,18 @@ public:
 	}
 };
 
-// State shared by all concurrent executions of the same benchmark.
+/* State shared by all concurrent executions of the same benchmark. */
 struct SharedState {
 	port::Mutex mu;
 	port::CondVar cv;
 	int total;
 
-	// Each thread goes through the following states:
-	//    (1) initializing
-	//    (2) waiting for others to be initialized
-	//    (3) running
-	//    (4) done
+	/* Each thread goes through the following states:
+	 * (1) initializing
+	 * (2) waiting for others to be initialized
+	 * (3) running
+	 * (4) done
+	 */
 
 	int num_initialized;
 	int num_done;
@@ -406,10 +407,10 @@ struct SharedState {
 	}
 };
 
-// Per-thread state for concurrent executions of the same benchmark.
+/* Per-thread state for concurrent executions of the same benchmark. */
 struct ThreadState {
-	int tid;     // 0..n-1 when running in n threads
-	Random rand; // Has different seeds for different threads
+	int tid;     /* 0..n-1 when running in n threads */
+	Random rand; /* Has different seeds for different threads */
 	Stats stats;
 	SharedState *shared;
 
@@ -439,11 +440,11 @@ public:
 	bool Done(int64_t increment)
 	{
 		if (increment <= 0)
-			increment = 1; // avoid Done(0) and infinite loops
+			increment = 1; /* avoid Done(0) and infinite loops */
 		ops_ += increment;
 
 		if (max_seconds_) {
-			// Recheck every appx 1000 ops (exact iff increment is factor of 1000)
+			/* Recheck every appx 1000 ops (exact iff increment is factor of 1000) */
 			auto granularity = FLAGS_ops_between_duration_checks;
 			if ((ops_ / granularity) != ((ops_ - increment) / granularity)) {
 				time_point now = std::chrono::high_resolution_clock::now();
@@ -904,11 +905,11 @@ private:
 
 	void BGWriter(ThreadState *thread, enum OperationType write_merge)
 	{
-		// Special thread that keeps writing until other threads are done.
+		/* Special thread that keeps writing until other threads are done. */
 		RandomGenerator gen;
 		int64_t bytes = 0;
 
-		// Don't merge stats from this thread with the readers.
+		/* Don't merge stats from this thread with the readers. */
 		thread->stats.SetExcludeFromMerge();
 
 		std::unique_ptr<const char[]> key_guard;
@@ -921,7 +922,7 @@ private:
 				MutexLock l(&thread->shared->mu);
 
 				if (thread->shared->num_done + 1 >= thread->shared->num_initialized) {
-					// Finish the write immediately
+					/* Finish the write immediately */
 					break;
 				}
 			}
@@ -971,11 +972,11 @@ private:
 		std::unique_ptr<const char[]> key_guard;
 		Slice key = AllocateKey(key_guard);
 
-		// the number of iterations is the larger of read_ or write_
+		/* the number of iterations is the larger of read_ or write_ */
 		while (!duration.Done(1)) {
 			GenerateKeyFromInt(thread->rand.Next() % FLAGS_num, FLAGS_num, &key);
 			if (get_weight == 0 && put_weight == 0) {
-				// one batch completed, reinitialize for next batch
+				/* one batch completed, reinitialize for next batch */
 				get_weight = FLAGS_readwritepercent;
 				put_weight = 100 - get_weight;
 			}
@@ -994,8 +995,8 @@ private:
 				reads_done++;
 				thread->stats.FinishedSingleOp();
 			} else if (put_weight > 0) {
-				// then do all the corresponding number of puts
-				// for all the gets we have done earlier
+				/* then do all the corresponding number of puts
+				 * for all the gets we have done earlier */
 				pmem::kv::status s =
 					kv_->put(key.ToString(), gen.Generate(value_size_).ToString());
 				if (s != pmem::kv::status::OK) {
@@ -1025,13 +1026,13 @@ private:
 
 int main(int argc, char **argv)
 {
-	// Default list of comma-separated operations to run
+	/* Default list of comma-separated operations to run */
 	static const char *FLAGS_benchmarks =
 		"fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
-	// Default engine name
+	/* Default engine name */
 	static const char *FLAGS_engine = "cmap";
 
-	// Print usage statement if necessary
+	/* Print usage statement if necessary */
 	if (argc != 1) {
 		if ((strcmp(argv[1], "?") == 0) || (strcmp(argv[1], "-?") == 0) ||
 		    (strcmp(argv[1], "h") == 0) || (strcmp(argv[1], "-h") == 0) ||
@@ -1040,7 +1041,8 @@ int main(int argc, char **argv)
 			exit(1);
 		}
 	}
-	// Parse command-line arguments
+
+	/* Parse command-line arguments */
 	for (int i = 1; i < argc; i++) {
 		int n;
 		char junk;
@@ -1076,7 +1078,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	// Run benchmark against default environment
+	/* Run benchmark against default environment */
 	g_env = leveldb::Env::Default();
 
 	BenchmarkLogger logger = BenchmarkLogger();
