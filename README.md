@@ -76,10 +76,10 @@ To simply run `pmemkv-bench` on DRAM:
 PMEM_IS_PMEM_FORCE=1 ./pmemkv_bench --db=/dev/shm/pmemkv --db_size_in_gb=1
 ```
 
-or using make command:
+or using make command (with custom testing path):
 
 ```sh
-make run_bench
+make run_bench [ KV_BENCH_TEST_PATH=<test_path> ]
 ```
 
 **Alternatively** you can run building selected version of pmemkv
@@ -90,8 +90,7 @@ using python script (available in project's root directory):
 python3 run_benchmark.py <build_config_file> <bench_scenarios_file>
 ```
 
-Example usage of this script is also shown in
-[one of our tests](./tests/test.py#L49).
+Example usage of this script is also shown in [one of our tests](./tests/test.py).
 
 ### Various Pools
 

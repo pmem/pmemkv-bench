@@ -32,16 +32,24 @@ def test_help():
 @pytest.mark.parametrize(
     "engine,test_path,benchmarks",
     [
-        ("cmap", os.getenv("TEST_PATH", "/dev/shm/pmemkv"), "fillrandom,readrandom"),
-        ("csmap", os.getenv("TEST_PATH", "/dev/shm/pmemkv"), "fillrandom,readrandom"),
+        (
+            "cmap",
+            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            "fillrandom,readrandom",
+        ),
+        (
+            "csmap",
+            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            "fillrandom,readrandom",
+        ),
         (
             "vcmap",
-            os.path.dirname(os.getenv("TEST_PATH", "/dev/shm/pmemkv")),
+            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv")),
             "fillrandom,readrandom",
         ),
         (
             "vsmap",
-            os.path.dirname(os.getenv("TEST_PATH", "/dev/shm/pmemkv")),
+            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv")),
             "fillrandom,readrandom",
         ),
     ],
@@ -107,7 +115,7 @@ def test_json(engine, test_path, benchmarks):
         {
             "env": {},
             "params": {
-                "--db": os.getenv("TEST_PATH", "/dev/shm/pmemkv"),
+                "--db": os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
                 "--db_size_in_gb": "2",
                 "--benchmarks": "fillseq",
                 "--engine": "radix",
