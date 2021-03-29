@@ -776,9 +776,8 @@ private:
 
 		if (s != pmem::kv::status::OK) {
 			fprintf(stderr,
-				"Cannot start engine (%s) for path (%s) with %i GB capacity\n%s\n\nUSAGE: %s",
-				engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str(),
-				USAGE.c_str());
+				"Cannot start engine (%s) for path (%s) with %i GB capacity\n%s",
+				engine, FLAGS_db, FLAGS_db_size_in_gb, pmem::kv::errormsg().c_str());
 			exit(-42);
 		}
 		logger.insert("Open [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
