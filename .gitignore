@@ -3,5 +3,6 @@
 !.gitattributes
 *.bin
 *.d
+__pycache__
 pmemkv_bench
 /build/
