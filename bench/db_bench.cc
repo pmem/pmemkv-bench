@@ -199,7 +199,7 @@ private:
 	};
 	int id = 0;
 	std::vector<hist> histograms;
-	CSV<int> csv = CSV<int>("id");
+	CSV<int> csv = CSV<int>("sequence_id");
 
 public:
 	void insert(std::string name, Histogram histogram)
@@ -509,7 +509,7 @@ private:
 	{
 #if defined(__linux)
 		auto now = std::time(NULL);
-		logger.insert("Date:", now);
+		logger.insert("Date", now);
 
 		FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
 		if (cpuinfo != NULL) {
