@@ -199,7 +199,7 @@ private:
 	};
 	int id = 0;
 	std::vector<hist> histograms;
-	CSV<int> csv = CSV<int>("id");
+	CSV<int> csv = CSV<int>("sequence_id");
 
 public:
 	void insert(std::string name, Histogram histogram)
@@ -207,7 +207,7 @@ public:
 		histograms.push_back({id, name, histogram.ToString()});
 		std::vector<double> percentiles = {50, 75, 90, 99.9, 99.99};
 		for (double &percentile : percentiles) {
-			csv.insert(id, "Percentilie P" + std::to_string(percentile) + " [micros/op]",
+			csv.insert(id, "Percentile P" + std::to_string(percentile) + " [micros/op]",
 				   histogram.Percentile(percentile));
 		}
 		csv.insert(id, "Median [micros/op]", histogram.Median());
@@ -509,7 +509,7 @@ private:
 	{
 #if defined(__linux)
 		auto now = std::time(NULL);
-		logger.insert("Date:", now);
+		logger.insert("Date", now);
 
 		FILE *cpuinfo = fopen("/proc/cpuinfo", "r");
 		if (cpuinfo != NULL) {
