@@ -600,7 +600,11 @@ public:
 		return Slice(key_guard.get(), key_size_);
 	}
 
-	void GenerateKeyFromInt(uint64_t v, int64_t num_keys, Slice *key, bool missing = false)
+	/**
+	 * Create key with binary value of v and filled up with '0',
+	 * up to key_size (if needed).
+	 */
+	void GenerateKeyFromInt(uint64_t v, Slice *key, bool missing = false)
 	{
 		char *start = const_cast<char *>(key->data());
 		char *pos = start;
@@ -827,7 +831,7 @@ private:
 
 			for (int i = n; i < n + batch_size; i++) {
 				const int k = seq ? i : (thread->rand.Next() % num) + start;
-				GenerateKeyFromInt(k, FLAGS_num, &key);
+				GenerateKeyFromInt(k, &key);
 				std::string value = std::string();
 				value.append(value_size_, 'X');
 				s = inserter.put(key.ToString(), value);
@@ -871,7 +875,7 @@ private:
 
 		for (int i = start; i < end; i++) {
 			const int k = seq ? i : (thread->rand.Next() % num) + start;
-			GenerateKeyFromInt(k, FLAGS_num, &key, missing);
+			GenerateKeyFromInt(k, &key, missing);
 			std::string value;
 			if (kv_->get(key.ToString(), &value) == pmem::kv::status::OK)
 				found++;
@@ -905,7 +909,7 @@ private:
 		Slice key = AllocateKey(key_guard);
 		for (int i = 0; i < num_; i++) {
 			const int k = seq ? i : (thread->rand.Next() % FLAGS_num);
-			GenerateKeyFromInt(k, FLAGS_num, &key);
+			GenerateKeyFromInt(k, &key);
 			kv_->remove(key.ToString());
 			thread->stats.FinishedSingleOp();
 		}
@@ -945,7 +949,7 @@ private:
 				}
 			}
 
-			GenerateKeyFromInt(thread->rand.Next() % FLAGS_num, FLAGS_num, &key);
+			GenerateKeyFromInt(thread->rand.Next() % FLAGS_num, &key);
 			pmem::kv::status s;
 
 			if (write_merge == kWrite) {
@@ -988,7 +992,7 @@ private:
 
 		/* the number of iterations is the larger of read_ or write_ */
 		while (!duration.Done(1)) {
-			GenerateKeyFromInt(thread->rand.Next() % FLAGS_num, FLAGS_num, &key);
+			GenerateKeyFromInt(thread->rand.Next() % FLAGS_num, &key);
 			if (get_weight == 0 && put_weight == 0) {
 				/* one batch completed, reinitialize for next batch */
 				get_weight = FLAGS_readwritepercent;
