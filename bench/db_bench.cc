@@ -61,7 +61,6 @@ static const std::string USAGE =
 	"--benchmarks=<name>,       (comma-separated list of benchmarks to run)\n"
 	"    fillseq                (load N values in sequential key order)\n"
 	"    fillrandom             (load N values in random key order)\n"
-	"    overwrite              (replace N values in random key order)\n"
 	"    readseq                (read N values in sequential key order)\n"
 	"    readrandom             (read N values in random key order)\n"
 	"    readmissing            (read N missing values in random key order)\n"
@@ -540,26 +539,20 @@ private:
 	}
 
 public:
-	Benchmark(Slice name, pmem::kv::db *&kv, int num_threads, const char *engine, BenchmarkLogger &logger)
-	    : kv_(kv), num_(FLAGS_num), tx_size_(FLAGS_tx_size), value_size_(FLAGS_value_size),
+	Benchmark(Slice name, std::unique_ptr<pmem::kv::db> &kv, int num_threads, const char *engine, BenchmarkLogger &logger)
+	    : kv_(kv.get()), num_(FLAGS_num), tx_size_(FLAGS_tx_size), value_size_(FLAGS_value_size),
 	      key_size_(FLAGS_key_size), reads_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads),
 	      readwrites_(FLAGS_reads < 0 ? FLAGS_num : FLAGS_reads), logger(logger), n(num_threads),
 	      name(name), engine(engine)
 	{
 		fprintf(stderr, "Running %s\n", name.ToString().c_str());
-		bool fresh_db = false;
 
 		if (name == Slice("fillseq")) {
-			fresh_db = true;
 			method = &Benchmark::WriteSeq;
 		} else if (name == Slice("fillrandom")) {
-			fresh_db = true;
 			method = &Benchmark::WriteRandom;
 		} else if (name == Slice("txfillrandom")) {
-			fresh_db = true;
 			method = &Benchmark::TxFillRandom;
-		} else if (name == Slice("overwrite")) {
-			method = &Benchmark::WriteRandom;
 		} else if (name == Slice("readseq")) {
 			method = &Benchmark::ReadSeq;
 		} else if (name == Slice("readrandom")) {
@@ -582,14 +575,9 @@ public:
 		logger.insert("Benchmark", name.ToString());
 		PrintHeader();
 
-		if (fresh_db) {
-			if (kv_ != nullptr) {
-				kv_->close();
-				delete kv_;
-				kv_ = nullptr;
-			}
-			Create(name.ToString());
-			kv = kv_;
+		if (!kv_) {
+			Create();
+			kv.reset(kv_);
 		}
 	}
 
@@ -761,7 +749,7 @@ private:
 		throw std::runtime_error(err_msg.str());
 	}
 
-	void Create(std::string name)
+	void Create()
 	{
 		assert(kv_ == nullptr);
 		auto start = g_env->NowMicros();
@@ -772,29 +760,13 @@ private:
 		if (cfg_s != pmem::kv::status::OK)
 			throw std::runtime_error("putting 'path' to config failed");
 
-		cfg_s = cfg.put_uint64("force_create", 1);
+		cfg_s = cfg.put_create_if_missing(true);
 		if (cfg_s != pmem::kv::status::OK)
-			throw std::runtime_error("putting 'force_create' to config failed");
+			throw std::runtime_error("putting 'create_if_missing' to config failed");
 
 		cfg_s = cfg.put_uint64("size", size);
 		if (cfg_s != pmem::kv::status::OK)
 			throw std::runtime_error("putting 'size' to config failed");
-
-		/* Check if the path is a directory or a file
-		 * (we don't pass filename in case of memkind
-		 * based engines, only dir). If it is a file,
-		 * remove the previous file with the same name. */
-		struct stat info;
-		if (stat(FLAGS_db, &info) == 0 && !(info.st_mode & S_IFDIR)) {
-			auto start = g_env->NowMicros();
-			/* Remove pool file. This should be
-			 * implemented using libpmempool for backward
-			 * compatibility. */
-			if (pmempool_rm(FLAGS_db, PMEMPOOL_RM_FORCE) != 0) {
-				throw std::runtime_error("Cannot remove pool: " + std::string(FLAGS_db));
-			}
-			logger.insert("Remove [millis/op]", ((g_env->NowMicros() - start) * 1e-3));
-		}
 
 		kv_ = new pmem::kv::db;
 		auto s = kv_->open(engine, std::move(cfg));
@@ -1044,7 +1016,7 @@ int main(int argc, char **argv)
 {
 	/* Default list of comma-separated operations to run */
 	static const char *FLAGS_benchmarks =
-		"fillseq,fillrandom,overwrite,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
+		"fillseq,fillrandom,readseq,readrandom,readmissing,deleteseq,deleterandom,readwhilewriting,readrandomwriterandom";
 	/* Default engine name */
 	static const char *FLAGS_engine = "cmap";
 
@@ -1099,7 +1071,7 @@ int main(int argc, char **argv)
 
 	BenchmarkLogger logger = BenchmarkLogger();
 	int return_value = 0;
-	pmem::kv::db *kv = NULL;
+	auto kv = std::unique_ptr<pmem::kv::db>(nullptr);
 	const char *benchmarks = FLAGS_benchmarks;
 	while (benchmarks != NULL) {
 		const char *sep = strchr(benchmarks, ',');
@@ -1119,10 +1091,6 @@ int main(int argc, char **argv)
 			return_value = 1;
 			break;
 		}
-	}
-	if (kv != NULL) {
-		kv->close();
-		delete kv;
 	}
 	logger.print();
 	if (FLAGS_histogram) {

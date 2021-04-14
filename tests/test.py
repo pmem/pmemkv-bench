@@ -35,22 +35,22 @@ def test_help():
         (
             "cmap",
             os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
-            "fillrandom,readrandom",
+            "readrandom,fillrandom,readrandom",
         ),
         (
             "csmap",
             os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
-            "fillrandom,readrandom",
+            "readrandom,fillrandom,readrandom",
         ),
         (
             "vcmap",
             os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv")),
-            "fillrandom,readrandom",
+            "readrandom,fillrandom,readrandom",
         ),
         (
             "vsmap",
             os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv")),
-            "fillrandom,readrandom",
+            "readrandom,fillrandom,readrandom",
         ),
     ],
 )

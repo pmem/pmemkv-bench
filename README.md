@@ -17,8 +17,9 @@ please file a report in the [issues tab](https://github.com/pmem/pmemkv-bench/is
 Contributions are also welcome - take a look at our [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Note:**
->The `pmemkv-bench` may clear pool passed in `--db` parameter, so pool, poolset or DAX
->device which contain existing data shouldn't be used.
+>It is the user's responsibility to clear/remove DB (e.g. pmempool rm). So running bench with --benchmarks=fillseq,fillrandom
+>might have another result than running with --benchmarks=fillseq, removing DB and running with --benchmarks--fillrandom, because in the first
+>case 'fillrandom' is writing to the already filled DB.
 
 ## Table of contents
 
@@ -37,7 +38,7 @@ Contributions are also welcome - take a look at our [CONTRIBUTING.md](CONTRIBUTI
 
 * **Linux 64-bit** (OSX and Windows are not yet supported)
 * [**libpmemkv**](https://github.com/pmem/pmemkv) - library tested in this benchmark;
-    at best the most recent release or version from master branch
+    currently only version from master branch
 * **libpmempool**, which is part of [PMDK](https://github.com/pmem/pmdk) - tool to manage persistent pools
 * [**python3**](https://www.python.org/download/releases/3.0/) - for executing additional python scripts (and tests)
 * Used only for **development**:
@@ -114,8 +115,7 @@ Benchmarking with poolset (to read more, see PMDK's manpage
 ```
 
 **Remember:**
->The `pmemkv-bench` may clear pool passed in `--db` parameter, so pool, poolset or DAX
->device which contain existing data shouldn't be used.
+>The `pmemkv-bench` won't clear the pool passed in `--db` parameter, it is the user's responsibility.
 
 ### Runtime Parameters
 
@@ -140,7 +140,6 @@ Nonetheless, the most important runtime parameters are:
 --benchmarks=<name>,       (comma-separated list of benchmarks to run)
     fillseq                (load N values in sequential key order)
     fillrandom             (load N values in random key order)
-    overwrite              (replace N values in random key order)
     readseq                (read N values in sequential key order)
     readrandom             (read N values in random key order)
     readmissing            (read N missing values in random key order)
