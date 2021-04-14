@@ -325,16 +325,20 @@ This parameter sets configuration of benchmarking process. Input structure is sp
     benchmark = DB_bench(config["db_bench"], pmemkv)
 
     benchmark.build()
+
+    reports = []
     for test_case in bench_params:
         logger.info(f"Running: {test_case}")
         benchmark.run(test_case["env"], test_case["params"])
-        benchmark.cleanup(test_case["params"])
+        if "cleanup" not in test_case or test_case["cleanup"] != 0:
+            benchmark.cleanup(test_case["params"])
         benchmark_results = benchmark.get_results()
 
         report = {}
         report["build_configuration"] = config
         report["runtime_parameters"] = test_case
         report["results"] = benchmark_results
+        reports.append(report)
 
         print_results(report)
         if (
@@ -350,6 +354,8 @@ This parameter sets configuration of benchmarking process. Input structure is sp
             )
         else:
             logger.warning("Results not uploaded to database")
+
+    return reports
 
 
 if __name__ == "__main__":
