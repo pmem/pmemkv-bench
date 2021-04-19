@@ -414,7 +414,7 @@ struct ThreadState {
 	Stats stats;
 	SharedState *shared;
 
-	ThreadState(int index) : tid(index), rand(time(NULL))
+	ThreadState(int index) : tid(index), rand(1000 + index)
 	{
 	}
 };
