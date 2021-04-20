@@ -14,9 +14,8 @@ import logging
 import sys
 from importlib import util as import_util
 from jsonschema import validate
-
-from pymongo import MongoClient
-import pymongo.errors
+import tempfile
+import datetime
 
 logger = logging.getLogger(__name__)
 sys.excepthook = lambda ex_type, ex, traceback: logger.error(
@@ -231,20 +230,17 @@ class DB_bench:
         self.logger.info(f"{db_path} cleaned")
 
     def get_results(self):
+        def preprocess(d):
+            return (
+                {k.replace(".", "_"): preprocess(v) for k, v in d.items()}
+                if isinstance(d, dict)
+                else d
+            )
+
         OutputReader = csv.DictReader(
             self.run_output.stdout.decode("UTF-8").split("\n"), delimiter=","
         )
-        return [dict(x) for x in OutputReader]
-
-
-def upload_to_mongodb(address, port, username, password, db_name, collection, data):
-    logger = logging.getLogger("mongodb")
-    client = MongoClient(address, int(port), username=username, password=password)
-    with client:
-        db = client[db_name]
-        collection = db[collection]
-        result = collection.insert_one(data)
-        logger.info(f"Inserted: {result.inserted_id} into {address}:{port}/{db_name}")
+        return [preprocess(x) for x in OutputReader]
 
 
 def print_results(results_dict):
@@ -315,25 +311,10 @@ Runs pmemkv-bench for pmemkv and libpmemobjcpp defined in configuration json
 | +------------------------+          |       | pmemkv-bench          |
 | | pmemkv bench           |          |       | git repository        |
 | | +----------------------+ <----------------+                       |
-| | Runs benchmark and     |          |       |                       |
-| | uploads results to     |          |       +-----------------------+
-| | mongoDB                |          |
-| |                        |          |       --------------------------+
-| |                        +----------------->+ MongoDB instance        |
-| +------------------------+          |       | +-----------------------+
-|                                     |       | Collects benchmarks     |
-|                                     |       | results                 |
-|                                     |       +----------+--------------+
-+-------------------------------------+                  |
-                                                         v
-                                              +----------+--------------+
-                                              |  MongoDB Charts         |
-                                              |  +----------------------+
-                                              |  Displays collected data|
-                                              +-------------------------+
-
-Environment variables for MongoDB client configuration:
-  MONGO_ADDRESS, MONGO_PORT, MONGO_USER, MONGO_PASSWORD, MONGO_DB_NAME and MONGO_DB_COLLECTION
+| | Runs benchmark         |          |       |                       |
+| |                        |          |       +-----------------------+
+| +------------------------+          | 
++-------------------------------------+ 
 """
     # Setup loglevel
     LOGLEVEL = os.environ.get("LOGLEVEL") or "INFO"
@@ -356,19 +337,6 @@ This parameter sets configuration of benchmarking process. Input structure is sp
     args = parser.parse_args()
     logger.info(f"{args.build_config_path=}")
 
-    # Setup database
-    db_address = db_port = db_user = db_passwd = db_name = db_collection = None
-    try:
-        db_address = os.environ["MONGO_ADDRESS"]
-        db_port = os.environ["MONGO_PORT"]
-        db_user = os.environ["MONGO_USER"]
-        db_passwd = os.environ["MONGO_PASSWORD"]
-        db_name = os.environ["MONGO_DB_NAME"]
-        db_collection = os.environ["MONGO_DB_COLLECTION"]
-    except KeyError as e:
-        logger.warning(
-            f"Environment variable {e} was not specified, so results cannot be uploaded to the database"
-        )
     schema_dir = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), "bench_scenarios"
     )
@@ -409,21 +377,7 @@ This parameter sets configuration of benchmarking process. Input structure is sp
         report["build_configuration"] = config
         report["runtime_parameters"] = test_case
         report["results"] = benchmark_results
-
         print_results(report)
-        if (
-            db_address
-            and db_port
-            and db_user
-            and db_passwd
-            and db_name
-            and db_collection
-        ):
-            upload_to_mongodb(
-                db_address, db_port, db_user, db_passwd, db_name, db_collection, report
-            )
-        else:
-            logger.warning("Results not uploaded to database")
 
         emon_data = None
         if test_case.get("emon") == "True":
