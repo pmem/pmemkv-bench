@@ -23,6 +23,8 @@ sys.excepthook = lambda ex_type, ex, traceback: logger.error(
     f"{ex_type.__name__}: {ex}"
 )
 
+RESULTS_ROOT_DIRECTORY = os.environ.get("PMEMKV_BENCH_RESULTS_DIR", "results")
+
 
 class CmdLine:
     """Wrapper for list, which may be passed to subprocess. It allows to construct POSIX style commands
@@ -46,6 +48,35 @@ class CmdLine:
 
     def __getitem__(self, item):
         return self.cmdline[item]
+
+
+class Emon:
+    def __init__(self):
+        self.logger = logging.getLogger(type(self).__name__)
+        self._emon_process = None
+        self._log = tempfile.TemporaryFile()
+
+    def start(self):
+        logger.info("Start emon")
+        cmd = "emon -collect-edp"
+        self._emon_process = subprocess.Popen(cmd, stdout=self._log, shell=True)
+
+    def stop(self, timeout=None):
+        logger.info("Stop emon")
+        subprocess.run("emon -stop", shell=True)
+        self._emon_process.wait(timeout=timeout)
+
+    def get_data(self):
+        if self._emon_process:
+            if self._emon_process.poll() != None:
+                self._log.seek(0)
+                return self._log.read().decode()
+        return None
+
+    def __del__(self):
+        if self._emon_process != None:
+            if self._emon_process.poll() == None:
+                self.stop(60)
 
 
 class Repository:
@@ -220,6 +251,21 @@ def print_results(results_dict):
     print(json.dumps(results_dict, indent=4, sort_keys=True))
 
 
+def save_results(results_dict, emon_output=None):
+    basename = "pmemkv_bench_results"
+    suffix = datetime.datetime.now().strftime("%y%m%d_%H%M%S_%f")
+    dirname = "_".join([basename, suffix])
+    results_path = os.path.join(RESULTS_ROOT_DIRECTORY, dirname)
+    os.makedirs(results_path)
+    output_file = os.path.join(results_path, "result.json")
+    with open(output_file, "w") as outfile:
+        json.dump(results_dict, outfile, indent=4, sort_keys=True)
+
+    if emon_output:
+        with open(os.path.join(results_path, "emon.dat"), "w") as emon_file:
+            emon_file.write(emon_output)
+
+
 def load_scenarios(path, schema_path=None):
     bench_params = None
     if path.endswith(".py"):
@@ -349,11 +395,16 @@ This parameter sets configuration of benchmarking process. Input structure is sp
 
     reports = []
     for test_case in bench_params:
+        emon = Emon()
         logger.info(f"Running: {test_case}")
+        if test_case.get("emon") == "True":
+            emon.start()
         benchmark.run(
             test_case["env"], test_case["pmemkv_bench"], test_case.get("numactl")
         )
-        if "cleanup" in test_case and test_case["cleanup"] != 0:
+        if test_case.get("emon") == "True":
+            emon.stop()
+        if test_case.get("cleanup", 0) != 0:
             benchmark.cleanup(test_case["pmemkv_bench"])
         benchmark_results = benchmark.get_results()
 
@@ -377,6 +428,12 @@ This parameter sets configuration of benchmarking process. Input structure is sp
             )
         else:
             logger.warning("Results not uploaded to database")
+
+        emon_data = None
+        if test_case.get("emon") == "True":
+            emon_data = emon.get_data()
+
+        save_results(report, emon_data)
 
     return reports
 
