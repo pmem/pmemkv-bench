@@ -13,6 +13,7 @@ tests_path = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.dirname(tests_path)
 sys.path.append(project_path)
 import run_benchmark as rb
+import jsonschema
 
 build_configuration = {
     "db_bench": {
@@ -210,6 +211,10 @@ def test_json(engine, test_path, benchmarks):
     ],
 )
 def test_benchmarks_separate_processes(bench1, cleanup1, bench2, cleanup2, expected):
+    """Test two runs of run_benchmark.py. Each in separate process,
+    some of them separated by a pool cleanup.
+    """
+
     benchmark_configuration = [
         {
             "env": {},
@@ -237,3 +242,22 @@ def test_benchmarks_separate_processes(bench1, cleanup1, bench2, cleanup2, expec
     extra_data = res[0]["results"][0]["extra_data"]
     found = int(extra_data.split()[0][1:])
     assert found == expected
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        "generate_obj_based_scope.py",
+    ],
+)
+def test_scenario(scenario):
+    """Test if schema validation works as expected."""
+
+    scenario_path = os.path.join(project_path, "bench_scenarios", scenario)
+    schema_path = os.path.join(project_path, "bench_scenarios", "bench.schema.json")
+
+    output = rb.load_scenarios(scenario_path)
+    schema = None
+    with open(schema_path, "r") as schema_file:
+        schema = json.loads(schema_file.read())
+    jsonschema.validate(instance=output, schema=schema)

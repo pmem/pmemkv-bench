@@ -4,12 +4,11 @@
 # Copyright 2021, Intel Corporation
 
 # This script implements generate() method, which may be invoked by run_benchmark.py directly
-# or used as standalone application, which prints configuration json (also validated against schema)
-# to stdout. Such once generated json may be saved and passed to run_benchmark.py as a parameter.
+# or used as standalone application, which prints configuration json to stdout.
+# Such once generated json may be saved and passed to run_benchmark.py as a parameter.
 
 import json
 import itertools
-import jsonschema
 import os
 
 benchmarks = [
@@ -76,12 +75,4 @@ def generate():
 
 if __name__ == "__main__":
     output = generate()
-    schema = None
-    with open("bench.schema.json", "r") as schema_file:
-        schema = json.loads(schema_file.read())
-    try:
-        jsonschema.validate(instance=output, schema=schema)
-    except jsonschema.exceptions.ValidationError as e:
-        print(e)
-        exit(1)
     print(json.dumps(output, indent=4))
