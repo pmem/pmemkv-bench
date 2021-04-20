@@ -192,6 +192,8 @@ def test_json(engine, test_path, benchmarks):
     "scenario",
     [
         "generate_obj_based_scope.py",
+        "generate_dram_scope.py",
+        "generate_memkind_based_scope.py",
     ],
 )
 def test_scenario(scenario):
