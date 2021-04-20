@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2020-2021, Intel Corporation
+
+#   EDP RUBY SCRIPT CONFIGURATION FILE
+#   emon -process-edp <edp_config_file>
+
+#ruby interpreter, change it according to the path where ruby is installed in your system
+RUBY_PATH="ruby"
+
+#Number of threads to process data in parallel. Typically it should equal to the number of logical CPUs in your processing system.
+PARALLELISM=24
+
+#input file names, you may need to change them
+EMON_DATA=emon.dat
+
+#output file name, you may want to change it
+OUTPUT=summary.xlsx
+
+#by default only system view will be outputted
+#there are 3 optional views to be selected
+#you can select one or more of them
+VIEW=--socket-view --core-view --thread-view
+
+#set the throughput (Transaction per Second)
+TPS=--tps 10
+
+#if timestamps are presented in EMON data, the charts can be plotted with time as the x-axis.
+#by default the sample number is used as the x-axis. Don't enable this if timestamp data is not present in EMON data
+TIMESTAMP_IN_CHART="--timestamp-in-chart"
+
