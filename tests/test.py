@@ -203,14 +203,14 @@ def test_json(engine, test_path, benchmarks):
 
 
 @pytest.mark.parametrize(
-    "bench1,cleanup1,bench2,cleanup2,expected",
+    "bench1,cleanup1,bench2,expected",
     [
-        ("fillseq", 0, "readseq", 1, 100),
-        ("fillrandom", 0, "readrandom", 1, 100),
-        ("readrandom", 1, "readrandom", 1, 0),
+        ("fillseq", 0, "readseq", 100),
+        ("fillrandom", 1, "readrandom", 0),
+        ("readrandom", 1, "readrandom", 0),
     ],
 )
-def test_benchmarks_separate_processes(bench1, cleanup1, bench2, cleanup2, expected):
+def test_benchmarks_separate_processes(bench1, cleanup1, bench2, expected):
     """Test two runs of run_benchmark.py. Each in separate process,
     some of them separated by a pool cleanup.
     """
@@ -234,7 +234,7 @@ def test_benchmarks_separate_processes(bench1, cleanup1, bench2, cleanup2, expec
 
     execute_run_benchmark(build_configuration, benchmark_configuration)
 
-    benchmark_configuration[0]["cleanup"] = cleanup2
+    benchmark_configuration[0]["cleanup"] = 1
     benchmark_configuration[0]["pmemkv_bench"]["--benchmarks"] = bench2
     res = execute_run_benchmark(build_configuration, benchmark_configuration)
 
@@ -248,6 +248,8 @@ def test_benchmarks_separate_processes(bench1, cleanup1, bench2, cleanup2, expec
     "scenario",
     [
         "generate_obj_based_scope.py",
+        "generate_dram_scope.py",
+        "generate_memkind_based_scope.py",
     ],
 )
 def test_scenario(scenario):
