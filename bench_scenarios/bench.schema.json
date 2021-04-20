@@ -19,9 +19,7 @@
                         "--key_size",
                         "--threads",
                         "--engine",
-                        "--num",
-                        "--db",
-                        "--db_size_in_gb"
+                        "--num"
                     ]
                 }
             },

@@ -247,6 +247,8 @@ def test_benchmarks_separate_processes(bench1, cleanup1, bench2, cleanup2, expec
     "scenario",
     [
         "generate_obj_based_scope.py",
+        "generate_dram_scope.py",
+        "generate_memkind_based_scope.py",
     ],
 )
 def test_scenario(scenario):
