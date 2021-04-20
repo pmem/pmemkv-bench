@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2021, Intel Corporation
 
-# This script implements generate() method, which may be invoked by run_benchmark.py directly
+# This script implements generate() method, which may be invoked by run_benchmark.py directly,
 # or used as standalone application, which prints configuration json to stdout.
-# Such once generated json may be saved and passed to run_benchmark.py as a parameter.
+# Such once generated json may be saved and passed to run_benchmark.py as a parameter
 
 import json
 import itertools
@@ -17,40 +17,30 @@ benchmarks = [
     "fillseq,readwhilewriting",
     "fillseq,readrandomwriterandom",
 ]
+
+
 key_size = [8]
 value_size = [8, 128, 256, 512, 1024]
-number_of_elements = 10000000
+number_of_elements = 100000000
 db_size = 500
+
 
 def concurrent_engines():
     number_of_threads = [1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56]
-    engine = ["cmap", "csmap"]
+    engine = ["vcmap"]
 
     result = itertools.product(
         benchmarks, key_size, value_size, number_of_threads, engine
     )
-    return list(result)
 
-
-def robinhood_engine():
-    size = [8]
-    number_of_threads = [1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56]
-    engine = ["robinhood"]
-
-    result = itertools.product(benchmarks, size, size, number_of_threads, engine)
     return list(result)
 
 
 def single_threaded_engines():
-    benchmarks_sth = [
-        "fillrandom,readrandom",
-        "fillseq,readseq",
-    ]
-
     number_of_threads = [1]
-    engine = ["radix", "stree"]
+    engine = ["vsmap"]
     result = itertools.product(
-        benchmarks_sth, key_size, value_size, number_of_threads, engine
+        benchmarks, key_size, value_size, number_of_threads, engine
     )
     return list(result)
 
@@ -59,10 +49,8 @@ def generate():
     benchmarks = []
     benchmarks.extend(single_threaded_engines())
     benchmarks.extend(concurrent_engines())
-    benchmarks.extend(robinhood_engine())
-
     benchmarks_configuration = []
-    db_path = os.getenv("PMEMKV_BENCH_DB_PATH", "/mnt/pmem0/pmemkv-bench")
+    db_path = os.getenv("PMEMKV_BENCH_DB_PATH", "/mnt/pmem0")
     for benchmark in benchmarks:
         benchmark_settings = {
             "env": {},
@@ -77,7 +65,7 @@ def generate():
                 "--db_size_in_gb": f"{db_size}",
             },
             "numactl": {
-                "--cpubind": f"file:{os.path.dirname(db_path)}",
+                "--cpubind": f"file:{db_path}",
             },
             "emon": "True",
         }
