@@ -742,7 +742,8 @@ private:
 	}
 
 	/* Throw exception for failed put (with proper message) */
-	void throw_put_error(int i, leveldb::Slice key, pmem::kv::status s) {
+	void throw_put_error(int i, leveldb::Slice key, pmem::kv::status s)
+	{
 		std::string prnt_key = key.ToString();
 		std::ostringstream err_msg;
 		err_msg << "Put error for " << std::to_string(i) << "-th key: ";
@@ -756,8 +757,8 @@ private:
 			}
 		}
 
-		err_msg << " (pmemkv status: " << std::to_string(int(s))
-			<< ", error: '" << pmem::kv::errormsg() << "')";
+		err_msg << " (pmemkv status: " << std::to_string(int(s)) << ", error: '"
+			<< pmem::kv::errormsg() << "')";
 		throw std::runtime_error(err_msg.str());
 	}
 
@@ -844,8 +845,8 @@ private:
 			thread->stats.FinishedSingleOp();
 			if (s != pmem::kv::status::OK) {
 				throw std::runtime_error("Commit failed at batch " +
-							 std::to_string(n / batch_size) +
-							 "\nError '" + pmem::kv::errormsg() + "'");
+							 std::to_string(n / batch_size) + "\nError '" +
+							 pmem::kv::errormsg() + "'");
 			}
 		}
 		thread->stats.AddBytes(bytes);
