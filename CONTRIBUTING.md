@@ -17,7 +17,7 @@ If you want to format your cpp code you can make adequate target:
 make cppformat
 ```
 
-for python scripts (using python's black formatter), use:
+for python scripts (using python's formatter - black in ver. 21.4b2), use:
 
 ```sh
 make pyformat
