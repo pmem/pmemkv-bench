@@ -17,13 +17,15 @@ If you want to format your cpp code you can make adequate target:
 make cppformat
 ```
 
-for python scripts (using python's black formatter), use:
+**NOTE**: We're using specific **clang-format** - version **11.0** is required.
+
+for python scripts use:
 
 ```sh
 make pyformat
 ```
 
-**NOTE**: We're using specific clang-format - version **11.0** is required.
+**NOTE**: We're using specific **black** formatter - version **21.4b2** is required.
 
 # Submitting Pull Requests
 

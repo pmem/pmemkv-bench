@@ -19,7 +19,7 @@ RUN apt update && \
 	python3-pip \
  && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install black
+RUN pip3 install black==21.4b2
 
 COPY . /pmemkv-bench
 
