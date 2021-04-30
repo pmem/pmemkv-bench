@@ -204,7 +204,11 @@ class Charts:
 
     @staticmethod
     def generate_standard_charts(
-        db_config, date_from, save_pipelines=False, print_raw_docs=False
+        db_config,
+        date_from,
+        save_pipelines=False,
+        print_raw_docs=False,
+        print_raw_numbers=False,
     ):
         """
         Generate standard set of charts, defined for performance report.
@@ -216,6 +220,8 @@ class Charts:
         @type save_pipelines: bool
         @param print_raw_docs: If True it stores raw documents, before aggregating results
         @type print_raw_docs: bool
+        @param print_raw_numbers: If True it stores raw numbers of aggregated results
+        @type print_raw_numbers: bool
         """
         # default params for all aggregations
         aggregation_params = {
@@ -245,6 +251,9 @@ class Charts:
             aggr_res, pipeline = MongodbConnector.get_std_aggr_pipeline(
                 db_config, aggregation_params
             )
+
+            if print_raw_numbers:
+                print_results(aggr_res, f"{file_path}_raw_numbers.json")
 
             aggr_res = MongodbConnector.parse_std_results(aggr_res, expected_res_count)
 
@@ -483,6 +492,9 @@ if __name__ == "__main__":
 	Parameter "-s" allows to save generated pipelines (along with charts)
 	for examination and potentially introducing some tweaks/changes.
 
+	Parameter "-n" allows to save raw numbers for examination
+	(along with charts) of aggregated results.
+
 	Parameter "-r" allows to save raw documents for examination
 	(along with charts) before aggregating/grouping the results.
 
@@ -514,6 +526,12 @@ if __name__ == "__main__":
         "-s",
         "--save-pipeline",
         help="Saves generated pipelines next to charts, before executing query.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-n",
+        "--raw-numbers",
+        help="Saves raw numbers (for generated pipelines) of aggregated results.",
         action="store_true",
     )
     parser.add_argument(
@@ -580,5 +598,9 @@ if __name__ == "__main__":
 
         # Generate standard charts
         Charts.generate_standard_charts(
-            db_config, args.date_from, args.save_pipeline, args.raw_docs
+            db_config,
+            args.date_from,
+            args.save_pipeline,
+            args.raw_docs,
+            args.raw_numbers,
         )
