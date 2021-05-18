@@ -10,7 +10,7 @@ PYTHON_FILES = $(shell find . -iname "*.py")
 KV_BENCH_TEST_PATH ?= /dev/shm/pmemkv
 
 
-.PHONY: cppformat $(CPP_FILES) pythonformat $(PYTHON_FILES)
+.PHONY: cppformat check-cppformat $(CPP_FILES) pyformat check-pyformat $(PYTHON_FILES)
 
 bench: reset
 	g++ ./bench/db_bench.cc ./bench/port/port_posix.cc ./bench/util/env.cc ./bench/util/env_posix.cc \
@@ -33,7 +33,7 @@ $(CPP_FILES):
 
 check-cppformat:
 	@for src in $(CPP_FILES) ; do \
-		clang-format-11 --verbose --Werror -n "$$src"
+		clang-format-11 --verbose --Werror -n "$$src" || exit 1 ;\
 	done
 
 pyformat: $(PYTHON_FILES)
@@ -43,5 +43,6 @@ $(PYTHON_FILES):
 
 check-pyformat:
 	@for src in $(PYTHON_FILES) ; do \
-		python3 -m black "$$src" --check
+		echo "$$src" ;\
+		python3 -m black "$$src" --check || exit 1 ;\
 	done

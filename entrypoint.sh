@@ -17,4 +17,3 @@ make check-pyformat
 
 echo "run basic test"
 pytest-3 -v ./tests/test.py
-

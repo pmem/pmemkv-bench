@@ -21,7 +21,7 @@ def create_config_file(configuration):
 
 
 def test_help():
-    """ Simple sanity check for -h option of run_benchmark.py. """
+    """Simple sanity check for -h option of run_benchmark.py."""
     sys.argv = ["dummy.py", "-h"]
     with pytest.raises(SystemExit) as e:
         result = rb.main()

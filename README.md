@@ -42,7 +42,9 @@ Contributions are also welcome - take a look at our [CONTRIBUTING.md](CONTRIBUTI
 * [**python3**](https://www.python.org/download/releases/3.0/) - for executing additional python scripts (and tests)
 * Used only for **development**:
 	* [**clang-format-11**](https://clang.llvm.org/docs/ClangFormat.html) -
-        to format and check coding style, version 11 is required
+        to format and check cpp coding style, version 11 is required
+	* [**black 21.4b2**](https://github.com/psf/black) -
+        to format and check python coding style, version 21.4b2 is required
 
 See our **[Dockerfile](./Dockerfile)** (used e.g. on our CI system) to get an idea what packages
 are required to build and run pmemkv-bench.
