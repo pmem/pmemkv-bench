@@ -29,36 +29,7 @@ def test_help():
     assert e.value.code == 0
 
 
-@pytest.mark.parametrize(
-    "engine,test_path,benchmarks",
-    [
-        (
-            "cmap",
-            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
-            "fillrandom,readrandom",
-        ),
-        (
-            "csmap",
-            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
-            "fillrandom,readrandom",
-        ),
-        (
-            "vcmap",
-            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv")),
-            "fillrandom,readrandom",
-        ),
-        (
-            "vsmap",
-            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv")),
-            "fillrandom,readrandom",
-        ),
-    ],
-)
-def test_json(engine, test_path, benchmarks):
-    """Basic integration test for run_benchmark.py. It runs full
-    benchmarking process for arbitrarily chosen parameters.
-    """
-
+def execute_benchmark(benchmark_configuration):
     build_configuration = {
         "db_bench": {
             "repo_url": project_path,
@@ -98,6 +69,51 @@ def test_json(engine, test_path, benchmarks):
         },
     }
 
+    build_config_file = create_config_file(build_configuration)
+    test_config_file = create_config_file(benchmark_configuration)
+    sys.argv = ["dummy.py", build_config_file.name, test_config_file.name]
+    try:
+        result = rb.main()
+    except Exception as e:
+        assert False, f"run-bench raised exception: {e}"
+
+    return result
+
+
+@pytest.mark.parametrize(
+    "engine,test_path,benchmarks",
+    [
+        (
+            "cmap",
+            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            "fillrandom,readrandom",
+        ),
+        (
+            "csmap",
+            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            "fillrandom,readrandom",
+        ),
+        (
+            "vcmap",
+            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv")),
+            "fillrandom,readrandom",
+        ),
+        (
+            "vsmap",
+            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv")),
+            "fillrandom,readrandom",
+        ),
+        (
+            "cmap",
+            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            "readrandom,fillrandom,readrandom",
+        ),
+    ],
+)
+def test_json(engine, test_path, benchmarks):
+    """Basic integration test for run_benchmark.py. It runs full
+    benchmarking process for arbitrarily chosen parameters.
+    """
     benchmark_configuration = [
         {
             "env": {"PMEM_IS_PMEM_FORCE": "1"},
@@ -111,6 +127,7 @@ def test_json(engine, test_path, benchmarks):
                 "--key_size": "8",
                 "--threads": "2",
             },
+            "cleanup": 1,
         },
         {
             "env": {},
@@ -126,11 +143,43 @@ def test_json(engine, test_path, benchmarks):
             },
         },
     ]
+    res = execute_benchmark(benchmark_configuration)
+    assert len(res) == 2
 
-    build_config_file = create_config_file(build_configuration)
-    test_config_file = create_config_file(benchmark_configuration)
-    sys.argv = ["dummy.py", build_config_file.name, test_config_file.name]
-    try:
-        result = rb.main()
-    except Exception as e:
-        assert False, f"run-bench raised exception: {e}"
+
+@pytest.mark.parametrize(
+    "bench1,cleanup1,bench2,cleanup2,expected",
+    [
+        ("fillseq", 0, "readseq", 1, 100),
+        ("fillrandom", 0, "readrandom", 1, 100),
+        ("readrandom", 1, "readrandom", 1, 0),
+    ],
+)
+def test_benchmarks_separate_processes(bench1, cleanup1, bench2, cleanup2, expected):
+    benchmark_configuration = [
+        {
+            "env": {},
+            "params": {
+                "--db": os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+                "--db_size_in_gb": "1",
+                "--benchmarks": bench1,
+                "--engine": "cmap",
+                "--num": "100",
+                "--value_size": "8",
+                "--key_size": "8",
+                "--threads": "2",
+            },
+            "cleanup": cleanup1,
+        }
+    ]
+
+    execute_benchmark(benchmark_configuration)
+
+    benchmark_configuration[0]["cleanup"] = cleanup2
+    benchmark_configuration[0]["params"]["--benchmarks"] = bench2
+    res = execute_benchmark(benchmark_configuration)
+
+    # parse x from: "extra_data" : "(x of 100 found by one thread)"
+    extra_data = res[0]["results"][0]["extra_data"]
+    found = int(extra_data.split()[0][1:])
+    assert found == expected
