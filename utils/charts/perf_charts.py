@@ -16,7 +16,7 @@ import random
 #
 # TODO:
 #   - use logging (as in run_benchmark.py)
-#   - parse pipeline from file to get rid of known issues (see CAVEATS)
+#   - parse pipeline from input file to get rid of known issues (see CAVEATS)
 #   - fix XXX's, when data available
 #
 
@@ -24,7 +24,13 @@ BAR_CHART_WIDTH = 1000
 BAR_CHART_MARGIN_LEFT = 50
 BAR_CHART_MARGIN_RIGHT = 50
 BAR_CHART_MARGIN_TOP = 50
-BAR_CHART_MARGIN_BOTTOM = 75
+BAR_CHART_MARGIN_BOTTOM = 100
+DEFAULT_CHART_DESCRIPTION = """
+Benchmark: pmemkv-bench<br />
+Platform: XXX: <Change Me!><br />
+"""
+HIGHER_BETTER = "<br />(higher is better)"
+LOWER_BETTER = "<br />(lower is better)"
 
 OUT_DIR = "./generated"
 IMAGE_EXT = "png"
@@ -112,6 +118,7 @@ class Charts:
         y_title,
         x_title,
         legend_title,
+        extra_desc="",
         width_data=BAR_CHART_WIDTH,
     ):
         """
@@ -129,6 +136,8 @@ class Charts:
         @type x_title: str
         @param legend_title: Title of the legend
         @type legend_title: str
+        @param extra_desc: Additional description to be shown beneath the chart
+        @type extra_desc: str
         @param width_data: Pixels of the image width
         @type width_data: int
         """
@@ -167,14 +176,25 @@ class Charts:
             width=width_data,
             paper_bgcolor="rgba(0,0,0,0)",  # make it transparent
             plot_bgcolor="rgba(0,0,0,0)",
-        )
-        figure.layout.margin.update(
-            {
+            margin={
                 "t": BAR_CHART_MARGIN_TOP,
                 "b": BAR_CHART_MARGIN_BOTTOM,
                 "l": BAR_CHART_MARGIN_LEFT,
                 "r": BAR_CHART_MARGIN_RIGHT,
-            }
+            },
+        )
+
+        # add text below the chart, with additional information
+        figure.add_annotation(
+            font_size=12,
+            x=0,
+            y=-0.25,
+            showarrow=False,
+            text=DEFAULT_CHART_DESCRIPTION + extra_desc,
+            xanchor="left",
+            align="left",
+            xref="paper",
+            yref="paper",
         )
 
         # prepare image and save on disk
@@ -184,7 +204,11 @@ class Charts:
 
     @staticmethod
     def generate_standard_charts(
-        db_config, date_from, save_pipelines=False, print_raw_docs=False
+        db_config,
+        date_from,
+        save_pipelines=False,
+        print_raw_docs=False,
+        print_raw_numbers=False,
     ):
         """
         Generate standard set of charts, defined for performance report.
@@ -196,6 +220,8 @@ class Charts:
         @type save_pipelines: bool
         @param print_raw_docs: If True it stores raw documents, before aggregating results
         @type print_raw_docs: bool
+        @param print_raw_numbers: If True it stores raw numbers of aggregated results
+        @type print_raw_numbers: bool
         """
         # default params for all aggregations
         aggregation_params = {
@@ -226,16 +252,26 @@ class Charts:
                 db_config, aggregation_params
             )
 
+            if print_raw_numbers:
+                print_results(aggr_res, f"{file_path}_raw_numbers.json")
+
             aggr_res = MongodbConnector.parse_std_results(aggr_res, expected_res_count)
 
+            # define extra info to add under the chart
+            extra_desc = f"Number of entries: {nums_str}"
+            if bench == "readrandom":
+                extra_desc += "<br /> readrandom was executed right after fillrandom"
+            if bench == "readseq":
+                extra_desc += "<br /> readseq was executed right after fillseq"
+
             Charts.generate_bar_chart(
-                aggr_res, chart_title, file_path, y_axis, x_axis, legend
+                aggr_res, chart_title, file_path, y_axis, x_axis, legend, extra_desc
             )
             if save_pipelines:
                 with open(f"{file_path}.json", "w") as outfile:
                     json.dump(pipeline, outfile, indent=4)
 
-        ## standard MT benchmarks ##
+        #### standard MT benchmarks ####
         aggregation_params["engines"] = ["csmap", "cmap"]
         for bench in [
             "fillrandom",
@@ -246,15 +282,16 @@ class Charts:
             "readwhilewriting",
         ]:
             aggregation_params["benchmark"] = [bench]
-            y_axis = "ops/sec"
+            y_axis = "ops/sec" + HIGHER_BETTER
             x_axis = "Threads"
             legend = "Engines"
-            chart_title = f"{y_axis} 8b {bench} MT engines"
-            file_path = f"{OUT_DIR}/MT_8_10Mil-{bench}"
+            nums_str = "10Mil"
+            chart_title = f"ops/sec 8B k&v {bench} MT engines"
+            file_path = f"{OUT_DIR}/MT_8_{nums_str}-{bench}"
 
             generate_chart(2)
 
-        ## standard MT benchmarks with robinhood ##
+        #### standard MT benchmarks with robinhood ####
         aggregation_params["engines"] = ["csmap", "cmap", "robinhood"]
         for bench in [
             "fillrandom",
@@ -265,46 +302,49 @@ class Charts:
             "readwhilewriting",
         ]:
             aggregation_params["benchmark"] = [bench]
-            y_axis = "ops/sec"
+            y_axis = "ops/sec" + HIGHER_BETTER
             x_axis = "Threads"
             legend = "Engines"
-            chart_title = f"{y_axis} 8b {bench} MT engines (w/ robinhood)"
-            file_path = f"{OUT_DIR}/MT_8_robinhood_10Mil-{bench}"
+            nums_str = "10Mil"
+            chart_title = f"ops/sec 8B k&v {bench} MT engines (w/ robinhood)"
+            file_path = f"{OUT_DIR}/MT_8_robinhood_{nums_str}-{bench}"
 
             generate_chart(3)
 
-        ## standard MT benchmarks with dram_vcmap ##
+        #### standard MT benchmarks with dram_vcmap ####
         aggregation_params["engines"] = ["csmap", "cmap", "dram_vcmap"]
         for bench in ["fillrandom", "fillseq", "readrandom", "readseq"]:
+            # it can be run for various count of records - dram results may differ
             for nums_str, nums in [("10Mil", [10000000])]:
                 aggregation_params["benchmark"] = [bench]
                 aggregation_params["nums"] = nums
-                y_axis = "ops/sec"
+                y_axis = "ops/sec" + HIGHER_BETTER
                 x_axis = "Threads"
                 legend = "Engines"
-                chart_title = f"{y_axis} 8b {bench} (w/ dram_vcmap)"
+                chart_title = f"ops/sec 8B k&v {bench} MT engines (w/ dram_vcmap)"
                 file_path = f"{OUT_DIR}/MT_8_dram_{nums_str}-{bench}"
 
                 generate_chart(3)
 
         # XXX added as a separate chart, with custom date_from, due to lack of new data
-        ## dram_vcmap - 1Mil entries ##
+        #### dram_vcmap - 1Mil entries ####
         aggregation_params["engines"] = ["dram_vcmap"]
         for bench in ["fillrandom", "fillseq"]:  # XXX
+            # it can be run for various count of records - dram results may differ
             for nums_str, nums in [("1Mil", [1000000])]:
                 aggregation_params["benchmark"] = [bench]
                 aggregation_params["nums"] = nums
                 aggregation_params["date_from"] = "2021-03-09"  # XXX
                 aggregation_params["emon_enabled"] = None  # XXX
-                y_axis = "ops/sec"
+                y_axis = "ops/sec" + HIGHER_BETTER
                 x_axis = "Threads"
                 legend = "Engines"
-                chart_title = f"{y_axis} 8b {bench} (w/ dram_vcmap)"
-                file_path = f"{OUT_DIR}/MT_8_dram_{nums_str}-{bench}"
+                chart_title = f"ops/sec 8B k&v {bench} engine dram_vcmap"
+                file_path = f"{OUT_DIR}/engine_dram_vcmap_8_{nums_str}-{bench}"
 
                 generate_chart(1)  # XXX
 
-        ## all benchmarks - ST results - value sizes ##
+        #### all benchmarks - ST results - value sizes ####
         aggregation_params = {
             "engines": ["csmap", "cmap", "robinhood", "radix", "stree"],
             "threads": [1],
@@ -319,15 +359,16 @@ class Charts:
         }
         for bench in ["fillrandom", "fillseq", "readrandom", "readseq"]:
             aggregation_params["benchmark"] = [bench]
-            y_axis = "ops/sec"
+            y_axis = "ops/sec" + HIGHER_BETTER
             x_axis = "Value sizes"
             legend = "Engines"
-            chart_title = f"8b {bench} single thread, value_size vs {y_axis}"
-            file_path = f"{OUT_DIR}/ST_8_10Mil_values-{bench}"
+            nums_str = "10Mil"
+            chart_title = f"ops/sec 8B keys {bench} Single Thread"
+            file_path = f"{OUT_DIR}/ST_8_{nums_str}_values-{bench}"
 
             generate_chart(5)
 
-        ## standard MT benchmarks - latency (P99.9) ##
+        #### standard MT benchmarks - latency (P99.9) ####
         aggregation_params = {
             "engines": ["csmap", "cmap"],
             "value_sizes": [8],
@@ -341,15 +382,16 @@ class Charts:
         }
         for bench in ["fillrandom", "fillseq", "readrandom", "readseq"]:
             aggregation_params["benchmark"] = [bench]
-            y_axis = "Latency P99.9 [us] (lower is better)"
+            y_axis = "Latency P99.9 [us]" + LOWER_BETTER
             x_axis = "Threads"
             legend = "Engines"
-            chart_title = f"{y_axis} 8b {bench} MT engines"
-            file_path = f"{OUT_DIR}/lat_P999_8_10Mil-{bench}"
+            nums_str = "10Mil"
+            chart_title = f"Latency P99.9 8B k&v {bench} MT engines"
+            file_path = f"{OUT_DIR}/lat_P999_8_{nums_str}-{bench}"
 
             generate_chart(2)
 
-        ## standard MT benchmarks with robinhood - latency (P99.9) ##
+        #### standard MT benchmarks with robinhood - latency (P99.9) ####
         aggregation_params = {
             "engines": ["csmap", "cmap", "robinhood"],
             "value_sizes": [8],
@@ -363,15 +405,16 @@ class Charts:
         }
         for bench in ["fillrandom", "fillseq", "readrandom", "readseq"]:
             aggregation_params["benchmark"] = [bench]
-            y_axis = "Latency P99.9 [us] (lower is better)"
+            y_axis = "Latency P99.9 [us]" + LOWER_BETTER
             x_axis = "Threads"
             legend = "Engines"
-            chart_title = f"{y_axis} 8b {bench} MT engines (w/ robinhood)"
-            file_path = f"{OUT_DIR}/lat_P999_8_robinhood_10Mil-{bench}"
+            nums_str = "10Mil"
+            chart_title = f"Latency P99.9 8B k&v {bench} MT engines (w/ robinhood)"
+            file_path = f"{OUT_DIR}/lat_P999_8_robinhood_{nums_str}-{bench}"
 
             generate_chart(3)
 
-        ## single engine with various value_sizes ##
+        #### single engine with various value_sizes ####
         aggregation_params = {
             "value_sizes": [8, 128, 256, 512, 1024],
             "key_sizes": [8],
@@ -386,17 +429,16 @@ class Charts:
             for engine in ["cmap", "csmap", "stree", "radix"]:
                 aggregation_params["engines"] = [engine]
                 aggregation_params["benchmark"] = [bench]
-                y_axis = "ops/sec"
+                y_axis = "ops/sec" + HIGHER_BETTER
                 x_axis = "Threads"
                 legend = "Value size [bytes]"
-                chart_title = (
-                    f"{engine} engine, {bench} 8b keys, value_size vs {y_axis}"
-                )
-                file_path = f"{OUT_DIR}/engine_{engine}_8_10Mil_values-{bench}"
+                nums_str = "10Mil"
+                chart_title = f"ops/sec 8B keys {bench} engine {engine}"
+                file_path = f"{OUT_DIR}/engine_{engine}_8_{nums_str}_values-{bench}"
 
                 generate_chart(5)
 
-        ## single engine with various benchmarks sets ##
+        #### single engine with various benchmarks sets ####
         # XXX no data available
         aggregation_params = {
             "value_sizes": [8],
@@ -427,11 +469,12 @@ class Charts:
             for engine in ["cmap", "csmap"]:  # "stree", "radix"
                 aggregation_params["engines"] = [engine]
                 aggregation_params["benchmarks_sets"] = [bench_set]
-                y_axis = "ops/sec"
+                y_axis = "ops/sec" + HIGHER_BETTER
                 x_axis = "Threads"
                 legend = "Benchmark"
-                chart_title = f"ops/sec {engine} engine, {bench_set} 8b keys"
-                file_path = f"{OUT_DIR}/engine_{engine}_8_10Mil_sets-{bench_set}"
+                nums_str = "10Mil"
+                chart_title = f"ops/sec 8B k&v {bench_set} engine {engine}"
+                file_path = f"{OUT_DIR}/engine_{engine}_8_{nums_str}_sets-{bench_set}"
 
                 # XXX no data yet
                 # generate_chart(3)
@@ -448,6 +491,9 @@ if __name__ == "__main__":
 
 	Parameter "-s" allows to save generated pipelines (along with charts)
 	for examination and potentially introducing some tweaks/changes.
+
+	Parameter "-n" allows to save raw numbers for examination
+	(along with charts) of aggregated results.
 
 	Parameter "-r" allows to save raw documents for examination
 	(along with charts) before aggregating/grouping the results.
@@ -480,6 +526,12 @@ if __name__ == "__main__":
         "-s",
         "--save-pipeline",
         help="Saves generated pipelines next to charts, before executing query.",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-n",
+        "--raw-numbers",
+        help="Saves raw numbers (for generated pipelines) of aggregated results.",
         action="store_true",
     )
     parser.add_argument(
@@ -546,5 +598,9 @@ if __name__ == "__main__":
 
         # Generate standard charts
         Charts.generate_standard_charts(
-            db_config, args.date_from, args.save_pipeline, args.raw_docs
+            db_config,
+            args.date_from,
+            args.save_pipeline,
+            args.raw_docs,
+            args.raw_numbers,
         )
