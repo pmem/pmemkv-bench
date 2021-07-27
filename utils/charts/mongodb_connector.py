@@ -51,20 +51,20 @@ DEFAULT_AGGR_ADD_FIELDS = {
         },
         "P999": {
             "$convert": {
-                "input": "$results.Percentilie P99_900000 [micros/op]",
+                "input": "$results.Percentile P99_900000 [micros/op]",
                 "to": "double",
                 "onError": "null",
             }
         },
         "P9999": {
             "$convert": {
-                "input": "$results.Percentilie P99_990000 [micros/op]",
+                "input": "$results.Percentile P99_990000 [micros/op]",
                 "to": "double",
                 "onError": "null",
             }
         },
         "Date": {
-            "$convert": {"input": "$results.Date:", "to": "date", "onError": "null"}
+            "$convert": {"input": "$results.Date", "to": "date", "onError": "null"}
         },
     }
 }
