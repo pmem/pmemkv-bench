@@ -7,12 +7,12 @@ import os, sys
 import pytest
 import json
 import tempfile
+import jsonschema
 
 tests_path = os.path.dirname(os.path.realpath(__file__))
 project_path = os.path.dirname(tests_path)
 sys.path.append(project_path)
 import run_benchmark as rb
-import jsonschema
 
 build_configuration = {
     "db_bench": {
@@ -205,3 +205,50 @@ def test_scenario(scenario):
     with open(schema_path, "r") as schema_file:
         schema = json.loads(schema_file.read())
     jsonschema.validate(instance=output, schema=schema)
+
+
+@pytest.mark.parametrize(
+    "test_description,input_json,schema",
+    [
+        (
+            "missing required projects to build",
+            {
+                "db_bench": {
+                    "repo_url": "project_path",
+                    "commit": "HEAD",
+                    "env": {},
+                },
+                "env": {"CC": "gcc", "CXX": "g++"},
+            },
+            "build.schema.json",
+        ),
+        (
+            "missing params",
+            [
+                {
+                    "env": {"PMEM_IS_PMEM_FORCE": "1"},
+                },
+            ],
+            "bench.schema.json",
+        ),
+        (
+            "missing params fields",
+            [
+                {
+                    "env": {"PMEM_IS_PMEM_FORCE": "1"},
+                    "params": {
+                        "--num": "100",
+                    },
+                },
+            ],
+            "bench.schema.json",
+        ),
+    ],
+)
+def test_wrong_input(input_json, schema, test_description):
+    """Unit test for json schema validation"""
+    schema_path = os.path.join(project_path, "bench_scenarios", schema)
+
+    json_test_path = create_config_file(input_json)
+    with pytest.raises(jsonschema.exceptions.ValidationError):
+        result = rb.load_scenarios(json_test_path.name, schema_path)

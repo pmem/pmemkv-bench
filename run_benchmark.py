@@ -230,17 +230,10 @@ class DB_bench:
         self.logger.info(f"{db_path} cleaned")
 
     def get_results(self):
-        def preprocess(d):
-            return (
-                {k.replace(".", "_"): preprocess(v) for k, v in d.items()}
-                if isinstance(d, dict)
-                else d
-            )
-
         OutputReader = csv.DictReader(
             self.run_output.stdout.decode("UTF-8").split("\n"), delimiter=","
         )
-        return [preprocess(x) for x in OutputReader]
+        return [x for x in OutputReader]
 
 
 def print_results(results_dict):
@@ -313,8 +306,8 @@ Runs pmemkv-bench for pmemkv and libpmemobjcpp defined in configuration json
 | | +----------------------+ <----------------+                       |
 | | Runs benchmark         |          |       |                       |
 | |                        |          |       +-----------------------+
-| +------------------------+          | 
-+-------------------------------------+ 
+| +------------------------+          |
++-------------------------------------+
 """
     # Setup loglevel
     LOGLEVEL = os.environ.get("LOGLEVEL") or "INFO"
