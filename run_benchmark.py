@@ -319,12 +319,14 @@ Runs pmemkv-bench for pmemkv and libpmemobjcpp defined in configuration json
     parser.add_argument(
         "build_config_path",
         help="""Path to json config file or python script, which provides generate() method.
-This parameter sets configuration of build process. Input structure is specified by bench_scenarios/build.schema.json""",
+This parameter sets configuration of build process. Input structure is specified by bench_scenarios/build.schema.json.
+Script may be parametrized by additional environment variables.""",
     )
     parser.add_argument(
         "benchmark_config_path",
         help="""Path to json config file or python script, which provides generate() method.
-This parameter sets configuration of benchmarking process. Input structure is specified by bench_scenarios/bench.schema.json""",
+This parameter sets configuration of benchmarking process. Input structure is specified by bench_scenarios/bench.schema.json.
+Script may be parametrized by additional environment variables.""",
     )
     args = parser.parse_args()
     logger.info(f"{args.build_config_path=}")
