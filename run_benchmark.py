@@ -96,7 +96,6 @@ class Repository:
         return f"{self.url} in {self.path}"
 
     def checkout(self):
-        self.logger.info(f"Checking out commit: {self.commit}")
         subprocess.run(
             "git checkout".split() + [self.commit], cwd=self.path, check=True
         )
@@ -112,8 +111,10 @@ class Repository:
             capture_output=True,
             check=True,
             universal_newlines=True,
-        ).stdout
-        self.logger.info(f"Commit sha: {rev_parsed_commit}")
+        ).stdout.rstrip()
+        self.logger.info(
+            f"Checked out commit: {self.commit} (sha: {rev_parsed_commit})"
+        )
         return rev_parsed_commit
 
 
@@ -143,8 +144,8 @@ class CmakeProject:
 
     def build(self):
         cpus = f"{os.cpu_count()}"
-        self.logger.info(f"{self.build_env}=")
-        self.logger.info(f"building {self.repo}")
+        self.logger.info(f"{self.build_env=}")
+        self.logger.info(f"Building repo {self.repo}")
         try:
             subprocess.run(
                 "cmake .".split() + self.cmake_params,
@@ -180,7 +181,7 @@ class DB_bench:
             "PKG_CONFIG_PATH": self.pmemkv.format_pkg_config_path(),
         }
         self.logger.debug(f"{build_env=}")
-        self.logger.info(f"building {self.repo}")
+        self.logger.info(f"Building benchmark {self.repo}")
 
         try:
             subprocess.run(
@@ -218,9 +219,9 @@ class DB_bench:
                 check=True,
             )
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"benchmark process failed: {e.stdout} ")
-            self.logger.error(self.run_output)
-            self.logger.error(f"with error: {e.stderr} ")
+            self.logger.error(f"Benchmark process failed: {e.stdout}")
+            self.logger.error(f"With error: {e.stderr}")
+            self.logger.error(f"Run output: {self.run_output}")
             raise e
 
     def cleanup(self, benchmark_params):
@@ -319,12 +320,14 @@ Runs pmemkv-bench for pmemkv and libpmemobjcpp defined in configuration json
     parser.add_argument(
         "build_config_path",
         help="""Path to json config file or python script, which provides generate() method.
-This parameter sets configuration of build process. Input structure is specified by bench_scenarios/build.schema.json""",
+This parameter sets configuration of build process. Input structure is specified by bench_scenarios/build.schema.json.
+Script may be parametrized by additional environment variables.""",
     )
     parser.add_argument(
         "benchmark_config_path",
         help="""Path to json config file or python script, which provides generate() method.
-This parameter sets configuration of benchmarking process. Input structure is specified by bench_scenarios/bench.schema.json""",
+This parameter sets configuration of benchmarking process. Input structure is specified by bench_scenarios/bench.schema.json.
+Script may be parametrized by additional environment variables.""",
     )
     args = parser.parse_args()
     logger.info(f"{args.build_config_path=}")
@@ -350,21 +353,23 @@ This parameter sets configuration of benchmarking process. Input structure is sp
     pmemkv.build()
 
     benchmark = DB_bench(config["db_bench"], pmemkv)
-
     benchmark.build()
 
     reports = []
     for test_case in bench_params:
         emon = Emon()
-        logger.info(f"Running: {test_case}")
         if test_case.get("emon") == "True":
+            logger.info("Starting emon...")
             emon.start()
+        logger.info(f"Running: {test_case}")
         benchmark.run(
             test_case["env"], test_case["pmemkv_bench"], test_case.get("numactl")
         )
         if test_case.get("emon") == "True":
+            logger.info("Stopping emon...")
             emon.stop()
         if test_case.get("cleanup", 0) != 0:
+            logger.info("Doing cleanup...")
             benchmark.cleanup(test_case["pmemkv_bench"])
         benchmark_results = benchmark.get_results()
 
@@ -374,10 +379,12 @@ This parameter sets configuration of benchmarking process. Input structure is sp
         report["results"] = benchmark_results
         reports.append(report)
 
+        logger.info("Run results:")
         print_results(report)
 
         emon_data = None
         if test_case.get("emon") == "True":
+            logger.info("Reading emon data...")
             emon_data = emon.get_data()
 
         save_results(report, emon_data)
