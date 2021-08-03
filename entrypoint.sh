@@ -16,4 +16,4 @@ make check-cppformat
 make check-pyformat
 
 echo "run basic test"
-pytest-3 -v ./tests/test.py
+pytest-3 ./tests/test.py -v --log-level=info
