@@ -87,17 +87,17 @@ def test_help():
     [
         (
             "cmap",
-            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            os.getenv("KV_BENCH_TEST_PATH", "/tmp/pmemkv"),
             "fillrandom,readrandom",
         ),
         (
             "csmap",
-            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            os.getenv("KV_BENCH_TEST_PATH", "/tmp/pmemkv"),
             "fillrandom,readrandom",
         ),
         (
             "blackhole",
-            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            os.getenv("KV_BENCH_TEST_PATH", "/tmp/pmemkv"),
             "fillrandom,readrandom",
         ),
     ],
@@ -136,27 +136,27 @@ def test_numactl(engine, test_path, benchmarks):
     [
         (
             "cmap",
-            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            os.getenv("KV_BENCH_TEST_PATH", "/tmp/pmemkv"),
             "fillrandom,readrandom",
         ),
         (
             "cmap",
-            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            os.getenv("KV_BENCH_TEST_PATH", "/tmp/pmemkv"),
             "readrandom,fillrandom,readrandom",
         ),
         (
             "csmap",
-            os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+            os.getenv("KV_BENCH_TEST_PATH", "/tmp/pmemkv"),
             "fillrandom,readrandom",
         ),
         (
             "vcmap",
-            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm")),
+            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/tmp")),
             "fillrandom,readrandom",
         ),
         (
             "vsmap",
-            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/dev/shm")),
+            os.path.dirname(os.getenv("KV_BENCH_TEST_PATH", "/tmp")),
             "fillrandom,readrandom",
         ),
     ],
@@ -184,7 +184,7 @@ def test_json(engine, test_path, benchmarks):
         {
             "env": {},
             "pmemkv_bench": {
-                "--db": os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+                "--db": os.getenv("KV_BENCH_TEST_PATH", "/tmp/pmemkv"),
                 "--db_size_in_gb": "2",
                 "--benchmarks": "fillseq",
                 "--engine": "radix",
@@ -213,7 +213,7 @@ def test_benchmarks_separate_processes(bench1, cleanup1, bench2, cleanup2, expec
         {
             "env": {},
             "pmemkv_bench": {
-                "--db": os.getenv("KV_BENCH_TEST_PATH", "/dev/shm/pmemkv"),
+                "--db": os.getenv("KV_BENCH_TEST_PATH", "/tmp/pmemkv"),
                 "--db_size_in_gb": "1",
                 "--benchmarks": bench1,
                 "--engine": "cmap",
