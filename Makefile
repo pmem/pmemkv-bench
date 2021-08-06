@@ -7,7 +7,7 @@ bench: CFLAGS = $(shell pkg-config --cflags libpmemkv libpmempool) -DOS_LINUX -f
 bench: LDFLAGS = -ldl -lpthread $(shell pkg-config --libs libpmemkv libpmempool)
 CPP_FILES = $(shell find . -iname "*.h" -o -iname "*.cc" -o -iname "*.cpp" -o -iname "*.hpp")
 PYTHON_FILES = $(shell find . -iname "*.py")
-KV_BENCH_TEST_PATH ?= /dev/shm/pmemkv
+KV_BENCH_TEST_PATH ?= /dev/shm/pmemkv_test_db
 
 
 .PHONY: cppformat check-cppformat $(CPP_FILES) pyformat check-pyformat $(PYTHON_FILES)
