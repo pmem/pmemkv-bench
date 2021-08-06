@@ -12,19 +12,19 @@ KV_BENCH_TEST_PATH ?= /dev/shm/pmemkv_test_db
 
 .PHONY: cppformat check-cppformat $(CPP_FILES) pyformat check-pyformat $(PYTHON_FILES)
 
-bench: reset
+bench: clean
 	g++ ./bench/db_bench.cc ./bench/port/port_posix.cc ./bench/util/env.cc ./bench/util/env_posix.cc \
 		./bench/util/histogram.cc ./bench/util/logging.cc ./bench/util/status.cc ./bench/util/testutil.cc \
 		-o pmemkv_bench -I./bench/include -I./bench -I./bench/util $(CFLAGS) $(LDFLAGS)
 
-reset:
-	rm -rf $(KV_BENCH_TEST_PATH)
+reset: clean
+	rm -rf "${KV_BENCH_TEST_PATH}"
 
-clean: reset
+clean:
 	rm -rf pmemkv_bench
 
 run_bench: bench
-	PMEM_IS_PMEM_FORCE=1 ./pmemkv_bench --db=$(KV_BENCH_TEST_PATH) --db_size_in_gb=1 --histogram=1
+	PMEM_IS_PMEM_FORCE=1 ./pmemkv_bench --db="${KV_BENCH_TEST_PATH}" --db_size_in_gb=1 --histogram=1
 
 cppformat: $(CPP_FILES)
 
