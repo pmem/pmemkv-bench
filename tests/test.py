@@ -111,7 +111,7 @@ def test_numactl(engine, test_path, benchmarks):
 
     benchmark_configuration = [
         {
-            "env": {"PMEM_IS_PMEM_FORCE": "1"},
+            "env": {"PMEM_IS_PMEM_FORCE": "1", "KV_BENCH_TEST_PATH": test_path},
             "pmemkv_bench": {
                 "--db": test_path,
                 "--db_size_in_gb": "1",
@@ -168,9 +168,10 @@ def test_json(engine, test_path, benchmarks):
     benchmarking process for arbitrarily chosen parameters.
     """
 
+    test_path_radix = os.getenv("KV_BENCH_TEST_PATH", DEFAULT_TEST_FILE)
     benchmark_configuration = [
         {
-            "env": {"PMEM_IS_PMEM_FORCE": "1"},
+            "env": {"PMEM_IS_PMEM_FORCE": "1", "KV_BENCH_TEST_PATH": test_path},
             "pmemkv_bench": {
                 "--db": test_path,
                 "--db_size_in_gb": "1",
@@ -184,9 +185,9 @@ def test_json(engine, test_path, benchmarks):
             "cleanup": 1,
         },
         {
-            "env": {},
+            "env": {"KV_BENCH_TEST_PATH": test_path_radix},
             "pmemkv_bench": {
-                "--db": os.getenv("KV_BENCH_TEST_PATH", DEFAULT_TEST_FILE),
+                "--db": test_path_radix,
                 "--db_size_in_gb": "2",
                 "--benchmarks": "fillseq",
                 "--engine": "radix",
@@ -215,11 +216,12 @@ def test_benchmarks_separate_processes(bench1, cleanup1, bench2, expected):
     some of them separated by a pool cleanup.
     """
 
+    test_path = os.getenv("KV_BENCH_TEST_PATH", DEFAULT_TEST_FILE)
     benchmark_configuration = [
         {
-            "env": {},
+            "env": {"KV_BENCH_TEST_PATH": test_path},
             "pmemkv_bench": {
-                "--db": os.getenv("KV_BENCH_TEST_PATH", DEFAULT_TEST_FILE),
+                "--db": test_path,
                 "--db_size_in_gb": "1",
                 "--benchmarks": bench1,
                 "--engine": "cmap",

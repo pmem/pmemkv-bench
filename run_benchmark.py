@@ -180,6 +180,8 @@ class DB_bench:
             "PATH": os.environ["PATH"],
             "PKG_CONFIG_PATH": self.pmemkv.format_pkg_config_path(),
         }
+        if "KV_BENCH_TEST_PATH" in os.environ:
+            build_env["KV_BENCH_TEST_PATH"] = os.environ["KV_BENCH_TEST_PATH"]
         self.logger.debug(f"{build_env=}")
         self.logger.info(f"Building benchmark {self.repo}")
 
