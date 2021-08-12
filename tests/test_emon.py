@@ -4,7 +4,6 @@
 # Copyright 2021, Intel Corporation
 
 import os, sys
-import pytest
 import time
 
 tests_path = os.path.dirname(os.path.realpath(__file__))
@@ -14,12 +13,12 @@ import run_benchmark as rb
 
 
 def test_emon():
-    """This test is intedned to be run only in the environment with
+    """This test is intended to be run only in the environment with
     installed emon
     """
     emon = rb.Emon()
     emon.start()
-    time.sleep(10)
+    time.sleep(5)
     emon.stop()
     assert emon._emon_process.poll() is not None
-    assert emon.get_data() is not None
+    assert emon.get_data()
