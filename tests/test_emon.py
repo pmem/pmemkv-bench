@@ -21,5 +21,5 @@ def test_emon():
     emon.start()
     time.sleep(10)
     emon.stop()
-    assert emon._emon_process.poll() != None
-    assert emon.get_data() != None
+    assert emon._emon_process.poll() is not None
+    assert emon.get_data() is not None

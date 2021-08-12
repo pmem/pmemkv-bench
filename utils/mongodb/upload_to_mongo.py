@@ -61,7 +61,7 @@ Environment variables for MongoDB client configuration:
 
     logger = logging.getLogger("uploader")
     # Setup database
-    db_address = db_port = db_user = db_passwd = db_name = db_collection = None
+    db_passwd = db_address = db_port = db_user = db_name = db_collection = None
     try:
         db_address = os.environ["MONGO_ADDRESS"]
         db_port = os.environ["MONGO_PORT"]
