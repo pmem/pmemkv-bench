@@ -35,7 +35,7 @@
 static const std::string USAGE =
 	"pmemkv_bench\n"
 	"--engine=<name>            (storage engine name, default: cmap)\n"
-	"--db=<location>            (path to persistent pool, default: /dev/shm/pmemkv)\n"
+	"--db=<location>            (path to persistent pool, default: /dev/shm/pmemkv_test_db)\n"
 	"                           (note: file on DAX filesystem, DAX device, or poolset file)\n"
 	"--db_size_in_gb=<integer>  (size of persistent pool to create in GB, default: 0)\n"
 	"                           (note: for existing poolset or device DAX configs use 0 or leave default value)\n"
@@ -89,7 +89,7 @@ static int FLAGS_value_size = 100;
 static bool FLAGS_histogram = false;
 
 /* Use the db with the following name. */
-static const char *FLAGS_db = "/dev/shm/pmemkv";
+static const char *FLAGS_db = "/dev/shm/pmemkv_test_db";
 
 /* Use following size when opening the database. */
 static int FLAGS_db_size_in_gb = 0;

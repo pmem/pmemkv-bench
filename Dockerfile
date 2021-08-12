@@ -13,6 +13,7 @@ USER root
 RUN apt update && \
 	DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
 	clang-format-11 \
+	numactl \
 	python3-pymongo \
 	python3-jsonschema \
 	python3-pytest \

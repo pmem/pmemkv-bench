@@ -13,6 +13,7 @@
             "-DENGINE_CSMAP=1",
             "-DENGINE_RADIX=1",
             "-DENGINE_STREE=1",
+            "-DENGINE_DRAM_VCMAP=1",
             "-DENGINE_ROBINHOOD=1",
             "-DBUILD_JSON_CONFIG=1",
             "-DCXX_STANDARD=20",

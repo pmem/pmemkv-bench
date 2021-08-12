@@ -8,6 +8,6 @@ runs:
   using: 'docker'
   image: '../Dockerfile'
   env:
-    KV_BENCH_TEST_PATH: '/tmp/pmemkv-bench'
+    KV_BENCH_TEST_PATH: '/tmp/pmemkv_test_db'
   args:
     - ${{ inputs.entrypoint_params }}
