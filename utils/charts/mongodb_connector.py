@@ -202,14 +202,14 @@ class MongodbConnector:
             }
         }
         # optional filters
-        if not emon_enabled == None:
+        if emon_enabled is not None:
             emon = ["1", 1, "True"] if emon_enabled else ["0", 0, "False"]
             match_pipeline["$match"].update({"runtime_parameters.emon": {"$in": emon}})
-        if not nums == None:
+        if nums is not None:
             match_pipeline["$match"].update({"num": {"$in": nums}})
-        if not threads == None:
+        if threads is not None:
             match_pipeline["$match"].update({"threads": {"$in": threads}})
-        if not benchmarks_sets == None:
+        if benchmarks_sets is not None:
             match_pipeline["$match"].update(
                 {"runtime_parameters.params.--benchmarks": {"$in": benchmarks_sets}}
             )

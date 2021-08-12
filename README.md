@@ -2,6 +2,7 @@
 
 [![.github/workflows/main.yml](https://github.com/pmem/pmemkv-bench/actions/workflows/main.yml/badge.svg)](https://github.com/pmem/pmemkv-bench/actions/workflows/main.yml)
 [![PMEMKV-BENCH version](https://img.shields.io/github/tag/pmem/pmemkv-bench.svg)](https://github.com/pmem/pmemkv-bench/releases/latest)
+[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/pmem/pmemkv-bench.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/pmem/pmemkv-bench/context:python)
 
 Benchmark for [libpmemkv](https://github.com/pmem/pmemkv/) and its underlying libraries,
 based on [leveldb's db_bench](https://github.com/google/leveldb).

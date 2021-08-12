@@ -67,14 +67,15 @@ class Emon:
 
     def get_data(self):
         if self._emon_process:
-            if self._emon_process.poll() != None:
+            if self._emon_process.poll() is not None:
+                logger.info("Get emon data")
                 self._log.seek(0)
                 return self._log.read().decode()
         return None
 
     def __del__(self):
-        if self._emon_process != None:
-            if self._emon_process.poll() == None:
+        if self._emon_process is not None:
+            if self._emon_process.poll() is None:
                 self.stop(60)
 
 
