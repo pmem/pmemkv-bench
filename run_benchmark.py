@@ -12,10 +12,9 @@ import csv
 import glob
 import logging
 import sys
+import datetime
 from importlib import util as import_util
 from jsonschema import validate
-import tempfile
-import datetime
 
 logger = logging.getLogger(__name__)
 sys.excepthook = lambda ex_type, ex, traceback: logger.error(
