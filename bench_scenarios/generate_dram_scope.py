@@ -10,7 +10,6 @@
 import argparse
 import json
 import itertools
-import os
 
 benchmarks = [
     "fillrandom,readrandom",

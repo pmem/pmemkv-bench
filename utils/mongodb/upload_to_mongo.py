@@ -4,12 +4,11 @@
 # Copyright 2020-2021, Intel Corporation
 
 import logging
-import sys
 import os
-from pymongo import MongoClient
 import argparse
 import json
 import csv
+from pymongo import MongoClient
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,8 @@ Environment variables for MongoDB client configuration:
 
     logger = logging.getLogger("uploader")
     # Setup database
-    db_passwd = db_address = db_port = db_user = db_name = db_collection = None
+    db_passwd = None
+    db_address = db_port = db_user = db_name = db_collection = None
     try:
         db_address = os.environ["MONGO_ADDRESS"]
         db_port = os.environ["MONGO_PORT"]
