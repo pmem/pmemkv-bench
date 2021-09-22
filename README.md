@@ -131,7 +131,7 @@ Nonetheless, the most important runtime parameters are:
 --engine=<name>            (storage engine name, default: cmap)
 --db=<location>            (path to persistent pool, default: /dev/shm/pmemkv_test_db)
                            (note: file on DAX filesystem, DAX device, or poolset file)
---db_size_in_gb=<integer>  (size of persistent pool to create in GB, default: 0)
+--db_size_in_gb=<integer>  (size of persistent pool to create in GiB, default: 0)
                            (note: for existing poolset or device DAX configs use 0 or leave default value)
                            (note: when pool path is non-existing, value should be > 0)
 --histogram=<0|1>          (show histograms when reporting latencies)
