@@ -17,6 +17,7 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <ratio>
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
@@ -755,7 +756,7 @@ private:
 	{
 		assert(kv_ == nullptr);
 		auto start = g_env->NowMicros();
-		auto size = 1024ULL * 1024ULL * 1024ULL * FLAGS_db_size_in_gb;
+		auto size = FLAGS_db_size_in_gb * std::giga::num;
 		pmem::kv::config cfg;
 
 		auto cfg_s = cfg.put_string("path", FLAGS_db);
