@@ -54,7 +54,7 @@ Environment variables for MongoDB client configuration:
         description=help_msg, formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument("json_path")
-    parser.add_argument("--csv_path", action="append")
+    parser.add_argument("--csv_path", action="append", default=[])
     parser.add_argument("-v", help="verbose", action="store_true")
     args = parser.parse_args()
 
