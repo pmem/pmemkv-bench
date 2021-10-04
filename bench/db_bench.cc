@@ -37,7 +37,7 @@ static const std::string USAGE =
 	"--engine=<name>            (storage engine name, default: cmap)\n"
 	"--db=<location>            (path to persistent pool, default: /dev/shm/pmemkv_test_db)\n"
 	"                           (note: file on DAX filesystem, DAX device, or poolset file)\n"
-	"--db_size_in_gb=<integer>  (size of persistent pool to create in GB, default: 0)\n"
+	"--db_size_in_gb=<integer>  (size of persistent pool to create in GiB, default: 0)\n"
 	"                           (note: for existing poolset or device DAX configs use 0 or leave default value)\n"
 	"                           (note: when pool path is non-existing, value should be > 0)\n"
 	"--histogram=<0|1>          (show histograms when reporting latencies)\n"
