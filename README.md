@@ -7,15 +7,23 @@
 Benchmark for [libpmemkv](https://github.com/pmem/pmemkv/) and its underlying libraries,
 based on [leveldb's db_bench](https://github.com/google/leveldb).
 
+## ⚠️ Discontinuation of the project
+The **pmemkv-bench** project will no longer be maintained by Intel.
+- Intel has ceased development and contributions including, but not limited to, maintenance, bug fixes, new releases,
+or updates, to this project.
+- Intel no longer accepts patches to this project.
+- If you have an ongoing need to use this project, are interested in independently developing it, or would like to
+maintain patches for the open source software community, please create your own fork of this project.
+- You will find more information [here](https://pmem.io/blog/2022/11/update-on-pmdk-and-our-long-term-support-strategy/).
+
+## Introduction
+
 The `pmemkv_bench` utility provides some standard read, write & remove benchmarks. It's
 based on the `db_bench` utility included with LevelDB and RocksDB, although the
 list of supported parameters is slightly different.
 
-We always try to improve this benchmark and keep it up-to-date with libpmemkv.
+It is up-to-date with libpmemkv.
 Please don't fully rely on API and the results produced by this tool.
-If you have any questions, improvement ideas or you found a bug,
-please file a report in the [issues tab](https://github.com/pmem/pmemkv-bench/issues).
-Contributions are also welcome - take a look at our [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Note:**
 >It is the user's responsibility to clear/remove DB (e.g. using [pmempool rm](https://pmem.io/pmdk/manpages/linux/v1.10/pmempool/pmempool-rm.1.html)).
@@ -156,6 +164,4 @@ To run the equivalent of "overwrite" benchmark, run fillrandom on already filled
 
 ## Contact us
 
-For more information about **pmemkv** or **pmemkv-bench**, contact Igor Chorążewicz (igor.chorazewicz@intel.com),
-Piotr Balcer (piotr.balcer@intel.com) or post on our **#pmem** Slack channel using
-[this invite link](https://join.slack.com/t/pmem-io/shared_invite/enQtNzU4MzQ2Mzk3MDQwLWQ1YThmODVmMGFkZWI0YTdhODg4ODVhODdhYjg3NmE4N2ViZGI5NTRmZTBiNDYyOGJjYTIyNmZjYzQxODcwNDg) or [Google group](https://groups.google.com/group/pmem).
+If you read the [blog post](https://pmem.io/blog/2022/11/update-on-pmdk-and-our-long-term-support-strategy/) and still have some questions (especially about discontinuation of the project), please contact us using the dedicated e-mail: pmdk_support@intel.com.
